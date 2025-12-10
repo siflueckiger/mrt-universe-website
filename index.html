@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SpaceNavigator - Fly & Explore</title>
+    <title>Magic Ramba Trash</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
     <style>
       body {
@@ -138,6 +138,36 @@
         box-shadow: none;
       }
 
+      #next-link-button {
+        position: absolute;
+        bottom: 30px;
+        left: 130px;
+        width: 80px;
+        height: 80px;
+        background: rgba(0, 100, 255, 0.3);
+        border: 4px solid rgba(0, 100, 255, 0.6);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+        color: white;
+        pointer-events: auto;
+        user-select: none;
+        box-shadow: 0 0 20px rgba(0, 100, 255, 0.4);
+      }
+
+      #next-link-button:active {
+        background: rgba(0, 100, 255, 0.6);
+        transform: scale(0.95);
+      }
+
+      #next-link-button.inactive {
+        background: rgba(100, 100, 100, 0.3);
+        border-color: rgba(100, 100, 100, 0.6);
+        box-shadow: none;
+      }
+
       @media (max-width: 768px) {
         #mobile-controls {
           display: block;
@@ -167,6 +197,7 @@
         </div>
       </div>
       <div id="action-button" class="inactive">⏎</div>
+      <div id="next-link-button" class="inactive">→</div>
     </div>
 
     <script>
@@ -175,44 +206,42 @@
         {
           title: "Somewhere in a Carrot Field",
           url: "https://youtu.be/5aqjgMyLG5o?si=3JkD_Nx2CWLkOOVO",
-          description:
-            "Artlu Bubble and the Dead Animal Gang - Somewhere in a Carrot Field",
-          category: "Musicvideo",
+          description: "Band: Artlu Bubble and the Dead Animal Gang",
         },
         {
           title: "Adolf",
           url: "https://youtu.be/zZAojfcRn14?si=UtXPR-Vnpe96I1ju",
-          description: "Mike Ständer Band - Adolf",
+          description: "Band: Mike Ständer Band",
           category: "Musicvideo",
         },
         {
           title: "Nothing",
           url: "https://youtu.be/Bc8TdmOhQQo?si=LW69Fu47xNoIyQrs",
-          description: "Shah Blah - Nothing",
+          description: "Band: Shah Blah",
           category: "Musicvideo",
         },
         {
           title: "Infantiler Bullshit",
           url: "https://youtu.be/HXqHBI38OUY?si=GYdEGtdVJTHfykZz",
-          description: "Mike Ständer Band - Infantiler Bullshit",
+          description: "Band: Mike Ständer Band",
           category: "Musicvideo",
         },
         {
           title: "Puppet Factory",
           url: "https://youtu.be/oTgBFSO_Yo8?si=T9E438bC7eKgZnGi",
-          description: "Deserto Parallax - Puppet Factory",
+          description: "Band: Deserto Parallax",
           category: "Musicvideo",
         },
         {
           title: "Holy Shelter",
           url: "https://youtu.be/hDgQwmotsV4?si=4ZmQSYxVIhJvT5hP",
-          description: "Shah Blah - Holy Shelter",
+          description: "Band: Shah Blah",
           category: "Musicvideo",
         },
         {
           title: "Who Sells Out",
           url: "https://youtu.be/zJbVd3pLQqk?si=M9o_t8Xb-LJ4H8py",
-          description: "Shah Blah - Who Sells Out",
+          description: "Band: Shah Blah",
           category: "Musicvideo",
         },
       ];
@@ -224,10 +253,6 @@
       let navi = [];
       let planets = [];
 
-      const planetFileNames = [
-        "https://cdn.jsdelivr.net/gh/nasa/openmct@master/dist/assets/images/bg-splash.jpg",
-      ];
-
       let navBorder = 25;
       let xMin = -3000;
       let yMin = -3000;
@@ -235,6 +260,7 @@
       let yMax = 3000;
 
       let nearestLink = null;
+      let selectedLinkIndex = null;
       let activationDistance = 150;
 
       // Mobile controls
@@ -577,6 +603,18 @@
           link.display(isNearest);
         }
 
+        // Draw navigation line to selected link
+        if (selectedLinkIndex !== null && selectedLinkIndex < links.length) {
+          let selectedLink = links[selectedLinkIndex];
+          // Random neon color
+          let hue = random(360);
+          colorMode(HSB);
+          stroke(hue, 100, 100);
+          colorMode(RGB);
+          strokeWeight(4);
+          line(ship.x, ship.y, selectedLink.x, selectedLink.y);
+        }
+
         // Ship
         ship.display();
 
@@ -648,6 +686,14 @@
             window.open(nearestLink.data.url, "_blank");
           }
         }
+        // Next link on S key
+        if (key === "s" || key === "S") {
+          selectNextLink();
+        }
+        // Deselect on ESC key
+        if (key === "Escape") {
+          selectedLinkIndex = null;
+        }
       }
 
       function windowResized() {
@@ -661,29 +707,56 @@
       function updateHUD(distance) {
         let hudElement = document.getElementById("nearest-link");
 
-        if (nearestLink && distance < activationDistance) {
-          hudElement.innerHTML = `
-          <div class="link-info">
-            <strong style="color: #00ffff;">${
-              nearestLink.data.title
-            }</strong><br>
-            ${nearestLink.data.description}<br>
-            <span style="color: #ffaa00;">${nearestLink.data.category}</span>
-          </div>
-          <div class="distance">Distanz: ${Math.round(distance)}px</div>
-          <div class="action">⏎ ENTER zum Öffnen</div>
-        `;
+        // Prioritize selected link over nearest link
+        let displayLink = null;
+        if (selectedLinkIndex !== null && selectedLinkIndex < links.length) {
+          displayLink = links[selectedLinkIndex];
         } else if (nearestLink) {
+          displayLink = nearestLink;
+        }
+
+        if (displayLink) {
+          let isSelected =
+            selectedLinkIndex !== null &&
+            displayLink === links[selectedLinkIndex];
+          let linkDistance = displayLink.getDistance(ship.x, ship.y);
+
+          // Only show the S/Select instruction on desktop (not mobile)
+          const isMobile =
+            window.matchMedia &&
+            window.matchMedia("(max-width: 768px)").matches;
           hudElement.innerHTML = `
           <div class="link-info">
-            Nächster Link:<br>
-            <strong>${nearestLink.data.title}</strong>
+            <strong style="color: ${isSelected ? "#00ff00" : "#00ffff"}">${
+            displayLink.data.title
+          }</strong>${isSelected ? " (SELECTED)" : ""}<br>
+            ${displayLink.data.description}<br>
+            <span style="color: #ffaa00;">${displayLink.data.category}</span>
           </div>
-          <div class="distance">Distanz: ${Math.round(distance)}px</div>
-          <div style="color: #888; margin-top: 10px;">Fliege näher heran...</div>
+          <div class="distance">Distanz: ${Math.round(linkDistance)}px</div>
+          <div style="color: #888; margin-top: 10px;">
+            ${
+              !isMobile
+                ? isSelected
+                  ? "S um zum nächsten Link zu wechseln"
+                  : "S um Link zu wählen"
+                : ""
+            }
+            ${linkDistance < activationDistance ? "<br>⏎ ENTER zum Öffnen" : ""}
+          </div>
         `;
         } else {
           hudElement.innerHTML = `Erkunde den Raum...`;
+        }
+      }
+
+      function selectNextLink() {
+        if (links.length === 0) return;
+
+        if (selectedLinkIndex === null) {
+          selectedLinkIndex = 0;
+        } else {
+          selectedLinkIndex = (selectedLinkIndex + 1) % links.length;
         }
       }
 
@@ -693,6 +766,7 @@
         const joystickBase = document.getElementById("joystick-base");
         const joystickStick = document.getElementById("joystick-stick");
         const actionButton = document.getElementById("action-button");
+        const nextLinkButton = document.getElementById("next-link-button");
 
         // Joystick controls
         function handleJoystickStart(e) {
@@ -760,10 +834,27 @@
           activateLink();
         });
 
-        // Update action button appearance based on link proximity
+        // Next link button
+        nextLinkButton.addEventListener("touchstart", (e) => {
+          e.preventDefault();
+          selectNextLink();
+        });
+
+        nextLinkButton.addEventListener("click", (e) => {
+          e.preventDefault();
+          selectNextLink();
+        });
+
+        // Update button appearances based on link proximity
         function updateActionButton() {
-          if (nearestLink) {
-            let d = nearestLink.getDistance(ship.x, ship.y);
+          let selectedLink = null;
+          if (selectedLinkIndex !== null && selectedLinkIndex < links.length) {
+            selectedLink = links[selectedLinkIndex];
+          }
+
+          // Action button state
+          if (selectedLink) {
+            let d = selectedLink.getDistance(ship.x, ship.y);
             if (d < activationDistance) {
               actionButton.classList.remove("inactive");
             } else {
@@ -772,6 +863,13 @@
           } else {
             actionButton.classList.add("inactive");
           }
+
+          // Next link button state
+          if (links.length > 0) {
+            nextLinkButton.classList.remove("inactive");
+          } else {
+            nextLinkButton.classList.add("inactive");
+          }
         }
 
         // Call this in draw loop
@@ -779,10 +877,15 @@
       }
 
       function activateLink() {
-        if (nearestLink) {
-          let d = nearestLink.getDistance(ship.x, ship.y);
+        let selectedLink = null;
+        if (selectedLinkIndex !== null && selectedLinkIndex < links.length) {
+          selectedLink = links[selectedLinkIndex];
+        }
+
+        if (selectedLink) {
+          let d = selectedLink.getDistance(ship.x, ship.y);
           if (d < activationDistance) {
-            window.open(nearestLink.data.url, "_blank");
+            window.open(selectedLink.data.url, "_blank");
           }
         }
       }
