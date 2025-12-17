@@ -176,12 +176,93 @@
           display: none;
         }
       }
+
+      /* Start menu overlay shown on first load */
+      #start-menu {
+        position: fixed;
+        inset: 0;
+        display: none; /* shown by script */
+        align-items: center;
+        justify-content: center;
+        background: rgba(2, 6, 12, 0.65);
+        z-index: 2000;
+        backdrop-filter: blur(4px);
+      }
+      #start-menu .panel {
+        background: rgba(0, 0, 0, 0.8);
+        color: #e6eef8;
+        padding: 20px 24px;
+        border-radius: 12px;
+        box-shadow: 0 12px 40px rgba(1, 8, 20, 0.7);
+        min-width: 320px;
+        max-width: 92%;
+        text-align: center;
+        font-size: 15px;
+      }
+      #start-menu h2 {
+        margin: 0 0 8px 0;
+        color: #00ff00;
+        font-size: 18px;
+      }
+      #start-menu p {
+        margin: 0 0 14px 0;
+        color: #cfeef2;
+      }
+      #start-menu button {
+        background: #00ff00;
+        color: #042018;
+        border: none;
+        padding: 10px 16px;
+        border-radius: 8px;
+        font-weight: 700;
+        cursor: pointer;
+        box-shadow: 0 8px 20px rgba(0, 255, 0, 0.12);
+      }
+      #start-menu button:focus {
+        outline: 2px solid rgba(0, 255, 0, 0.24);
+      }
+      body.start-open {
+        overflow: hidden;
+      }
     </style>
   </head>
   <body>
     <div id="hud">
       <h3>Magic Ramba Trash Universe</h3>
       <div id="nearest-link">Erkunde den Raum...</div>
+    </div>
+
+    <!-- Start menu overlay -->
+    <div
+      id="start-menu"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="start-title"
+    >
+      <div class="panel" id="start-panel">
+        <h2 id="start-title">Welcome to the Magic Ramba Trash Universe</h2>
+        <p>HOW TO PLAY:</p>
+        <ul style="text-align: left; margin: 8px 0 14px 18px">
+          <li>
+            Use the <strong>Arrow Keys</strong> or the
+            <strong>Joystick</strong> to navigate and discover links.
+          </li>
+          <li>
+            <strong>ENTER</strong> or the <strong>action button</strong> opens
+            links when you're close to one.
+          </li>
+          <li>
+            <strong>S</strong> or the <strong>next link button</strong> selects
+            links so you can travel to them quickly.
+          </li>
+        </ul>
+        <div
+          id="start-countdown"
+          aria-live="polite"
+          style="color: #9fe; margin-bottom: 10px"
+        ></div>
+        <button id="start-button" type="button">Start</button>
+      </div>
     </div>
 
     <div id="controls">
@@ -247,6 +328,62 @@
         },
       ];
 
+      // Start menu initialization: shows start overlay on load and enforces a minimum loading duration
+      function initStartMenu() {
+        const menu = document.getElementById("start-menu");
+        if (!menu) return;
+        const btn = document.getElementById("start-button");
+        const countdown = document.getElementById("start-countdown");
+        const minLoad = 5000; // milliseconds (minimum loading time)
+        let startAt = Date.now();
+
+        // Start button is disabled until minLoad has passed
+        btn.disabled = true;
+        btn.style.opacity = "0.6";
+
+        function updateCountdown() {
+          const elapsed = Date.now() - startAt;
+          const remaining = Math.max(0, Math.ceil((minLoad - elapsed) / 1000));
+          if (elapsed < minLoad) {
+            countdown.textContent = "Lädt… " + remaining + "s";
+            return false;
+          }
+          countdown.textContent = "";
+          btn.disabled = false;
+          btn.style.opacity = "";
+          return true;
+        }
+
+        updateCountdown();
+        const ticker = setInterval(() => {
+          if (updateCountdown()) {
+            clearInterval(ticker);
+          }
+        }, 250);
+
+        function hideMenu() {
+          if (btn.disabled) return; // enforce minimum display time
+          menu.style.display = "none";
+          document.body.classList.remove("start-open");
+          btn.blur();
+          // mark app ready so input and buttons are active
+          appReady = true;
+        }
+
+        btn.addEventListener("click", hideMenu);
+        document.addEventListener("keydown", function (e) {
+          if (menu.style.display === "none") return;
+          if ((e.key === "Enter" || e.key === " ") && !btn.disabled) hideMenu();
+          if (e.key === "Escape" && !btn.disabled) hideMenu();
+        });
+
+        // show and focus
+        menu.style.display = "flex";
+        document.body.classList.add("start-open");
+        setTimeout(() => btn.focus(), 120);
+      }
+      initStartMenu();
+
       // ==================== GLOBALS ====================
       let stars = [];
       let ship;
@@ -263,6 +400,8 @@
       let nearestLink = null;
       let selectedLinkIndex = null;
       let activationDistance = 150;
+      // whether the app has finished loading and user dismissed the start menu
+      let appReady = false;
 
       // Mobile controls
       let joystick = {
@@ -277,7 +416,7 @@
       // Movement acceleration towards selected link
       let baseMoveSpeed = 1;
       let accelerationFactor = 0; // current extra acceleration multiplier (0..maxAccMultiplier)
-      let accRate = 0.05; // how fast acceleration increases per frame
+      let accRate = 0.2; // how fast acceleration increases per frame
       let decRate = 0.1; // how fast acceleration decreases per frame
       let maxAccMultiplier = 10; // maximum additional multiplier (speed = baseMoveSpeed * (1 + accelerationFactor))
 
@@ -641,6 +780,8 @@
       // ==================== INPUT HANDLING ====================
 
       function handleInput() {
+        // Ignore input until app is ready
+        if (!appReady) return;
         // Determine input direction from keyboard and joystick
         let inputX = 0;
         let inputY = 0;
@@ -772,6 +913,7 @@
       }
 
       function keyPressed() {
+        if (!appReady) return; // ignore keys until start menu dismissed
         // Open link on ENTER or SPACE
         if ((key === "Enter" || key === " ") && nearestLink) {
           let d = nearestLink.getDistance(ship.x, ship.y);
@@ -940,27 +1082,37 @@
         // Action button
         actionButton.addEventListener("touchstart", (e) => {
           e.preventDefault();
+          if (!appReady) return;
           activateLink();
         });
 
         actionButton.addEventListener("click", (e) => {
           e.preventDefault();
+          if (!appReady) return;
           activateLink();
         });
 
         // Next link button
         nextLinkButton.addEventListener("touchstart", (e) => {
           e.preventDefault();
+          if (!appReady) return;
           selectNextLink();
         });
 
         nextLinkButton.addEventListener("click", (e) => {
           e.preventDefault();
+          if (!appReady) return;
           selectNextLink();
         });
 
         // Update button appearances based on link proximity
         function updateActionButton() {
+          if (!appReady) {
+            actionButton.classList.add("inactive");
+            nextLinkButton.classList.add("inactive");
+            return;
+          }
+
           let selectedLink = null;
           if (selectedLinkIndex !== null && selectedLinkIndex < links.length) {
             selectedLink = links[selectedLinkIndex];
