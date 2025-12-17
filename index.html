@@ -217,6 +217,10 @@
         font-weight: 700;
         cursor: pointer;
         box-shadow: 0 8px 20px rgba(0, 255, 0, 0.12);
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+        user-select: none;
+        -webkit-user-select: none;
       }
       #start-menu button:focus {
         outline: 2px solid rgba(0, 255, 0, 0.24);
@@ -371,6 +375,21 @@
         }
 
         btn.addEventListener("click", hideMenu);
+        // Support touch and pointer devices so mobile taps are handled reliably
+        btn.addEventListener(
+          "touchstart",
+          function (e) {
+            if (btn.disabled) return;
+            if (e.cancelable) e.preventDefault();
+            hideMenu();
+          },
+          { passive: false }
+        );
+        btn.addEventListener("pointerdown", function (e) {
+          if (btn.disabled) return;
+          if (e.cancelable) e.preventDefault();
+          hideMenu();
+        });
         document.addEventListener("keydown", function (e) {
           if (menu.style.display === "none") return;
           if ((e.key === "Enter" || e.key === " ") && !btn.disabled) hideMenu();
@@ -1118,14 +1137,17 @@
             selectedLink = links[selectedLinkIndex];
           }
 
-          // Action button state
+          // Action button state — allow opening nearest link if within activationDistance
+          let actionable = false;
           if (selectedLink) {
             let d = selectedLink.getDistance(ship.x, ship.y);
-            if (d < activationDistance) {
-              actionButton.classList.remove("inactive");
-            } else {
-              actionButton.classList.add("inactive");
-            }
+            actionable = d < activationDistance;
+          } else if (nearestLink) {
+            let d = nearestLink.getDistance(ship.x, ship.y);
+            actionable = d < activationDistance;
+          }
+          if (actionable && appReady) {
+            actionButton.classList.remove("inactive");
           } else {
             actionButton.classList.add("inactive");
           }
@@ -1143,16 +1165,20 @@
       }
 
       function activateLink() {
-        let selectedLink = null;
+        if (!appReady) return;
+        // Prefer selected link, fall back to nearest link if close enough
+        let linkToOpen = null;
         if (selectedLinkIndex !== null && selectedLinkIndex < links.length) {
-          selectedLink = links[selectedLinkIndex];
+          linkToOpen = links[selectedLinkIndex];
+        } else if (nearestLink) {
+          linkToOpen = nearestLink;
         }
 
-        if (selectedLink) {
-          let d = selectedLink.getDistance(ship.x, ship.y);
+        if (linkToOpen) {
+          let d = linkToOpen.getDistance(ship.x, ship.y);
           if (d < activationDistance) {
-            window.open(selectedLink.data.url, "_blank");
-            // reset acceleration now that link is reached
+            window.open(linkToOpen.data.url, "_blank");
+            // reset acceleration now that link is reached/opened
             accelerationFactor = 0;
           }
         }
