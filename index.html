@@ -274,6 +274,13 @@
         maxDistance: 35,
       };
 
+      // Movement acceleration towards selected link
+      let baseMoveSpeed = 1;
+      let accelerationFactor = 0; // current extra acceleration multiplier (0..maxAccMultiplier)
+      let accRate = 0.05; // how fast acceleration increases per frame
+      let decRate = 0.1; // how fast acceleration decreases per frame
+      let maxAccMultiplier = 10; // maximum additional multiplier (speed = baseMoveSpeed * (1 + accelerationFactor))
+
       // ==================== CLASSES ====================
 
       class Star {
@@ -283,7 +290,7 @@
           this.color = color(random(200, 255));
           this.size = random(1, 4);
           this.speedMin = 1;
-          this.speedMax = 15;
+          this.speedMax = 25;
           this.speed = random(this.speedMin, this.speedMax);
         }
 
@@ -634,30 +641,115 @@
       // ==================== INPUT HANDLING ====================
 
       function handleInput() {
-        let moveSpeed = 1;
-        let moving = false;
+        // Determine input direction from keyboard and joystick
+        let inputX = 0;
+        let inputY = 0;
+        if (keyIsDown(LEFT_ARROW)) {
+          inputX -= 1;
+        }
+        if (keyIsDown(RIGHT_ARROW)) {
+          inputX += 1;
+        }
+        if (keyIsDown(UP_ARROW)) {
+          inputY -= 1;
+        }
+        if (keyIsDown(DOWN_ARROW)) {
+          inputY += 1;
+        }
 
-        // Keyboard controls
+        // Add joystick direction (analog)
+        if (joystick.active) {
+          if (Math.abs(joystick.deltaX) > 5)
+            inputX += Math.sign(joystick.deltaX);
+          if (Math.abs(joystick.deltaY) > 5)
+            inputY += Math.sign(joystick.deltaY);
+        }
+
+        let moving = inputX !== 0 || inputY !== 0;
+
+        // If the selected link is on-screen or within activation distance, stop movement, reset acceleration and deselect
+        if (selectedLinkIndex !== null && selectedLinkIndex < links.length) {
+          let selReach = links[selectedLinkIndex];
+
+          // On-screen check: deselect as soon as the link is visible on the canvas
+          if (
+            selReach.x >= 0 &&
+            selReach.x <= width &&
+            selReach.y >= 0 &&
+            selReach.y <= height
+          ) {
+            accelerationFactor = 0;
+            selectedLinkIndex = null;
+            return;
+          }
+
+          let dReach = selReach.getDistance(ship.x, ship.y);
+          if (dReach <= activationDistance) {
+            // we reached the link; stop movement, reset acceleration and deselect it
+            accelerationFactor = 0;
+            selectedLinkIndex = null;
+            return;
+          }
+        }
+
+        // Acceleration towards selected link when moving in its direction
+        if (
+          selectedLinkIndex !== null &&
+          selectedLinkIndex < links.length &&
+          moving
+        ) {
+          let sel = links[selectedLinkIndex];
+          let lx = sel.x - ship.x;
+          let ly = sel.y - ship.y;
+          let distToLink = Math.sqrt(lx * lx + ly * ly);
+
+          if (distToLink > 0) {
+            let nlx = lx / distToLink;
+            let nly = ly / distToLink;
+
+            let lenInput = Math.sqrt(inputX * inputX + inputY * inputY);
+            let nix = inputX / lenInput;
+            let niy = inputY / lenInput;
+
+            // dot product: 1 means exact same direction
+            let dot = nlx * nix + nly * niy;
+
+            if (dot > 0.7) {
+              accelerationFactor = Math.min(
+                maxAccMultiplier,
+                accelerationFactor + accRate
+              );
+            } else {
+              accelerationFactor = Math.max(0, accelerationFactor - decRate);
+            }
+          } else {
+            accelerationFactor = 0;
+          }
+        } else {
+          // decay acceleration when not moving toward selected link
+          accelerationFactor = Math.max(0, accelerationFactor - decRate);
+        }
+
+        // Compute move speeds including acceleration
+        let moveSpeed = baseMoveSpeed * (1 + accelerationFactor);
+
+        // Keyboard movement (preserve original sign convention)
         if (keyIsDown(LEFT_ARROW)) {
           moveObjects("x", moveSpeed);
-          moving = true;
         }
         if (keyIsDown(RIGHT_ARROW)) {
           moveObjects("x", -moveSpeed);
-          moving = true;
         }
         if (keyIsDown(UP_ARROW)) {
           moveObjects("y", moveSpeed);
-          moving = true;
         }
         if (keyIsDown(DOWN_ARROW)) {
           moveObjects("y", -moveSpeed);
-          moving = true;
         }
 
-        // Joystick controls
+        // Joystick controls (scaled and affected by acceleration)
         if (joystick.active) {
-          let speedMultiplier = 0.03;
+          let speedMultiplier = 0.03 * (1 + accelerationFactor);
           if (Math.abs(joystick.deltaX) > 5) {
             moveObjects("x", -joystick.deltaX * speedMultiplier);
           }
@@ -685,6 +777,8 @@
           let d = nearestLink.getDistance(ship.x, ship.y);
           if (d < activationDistance) {
             window.open(nearestLink.data.url, "_blank");
+            // reset acceleration when a link is reached/opened
+            accelerationFactor = 0;
           }
         }
         // Next link on S key
@@ -887,6 +981,8 @@
           let d = selectedLink.getDistance(ship.x, ship.y);
           if (d < activationDistance) {
             window.open(selectedLink.data.url, "_blank");
+            // reset acceleration now that link is reached
+            accelerationFactor = 0;
           }
         }
       }
