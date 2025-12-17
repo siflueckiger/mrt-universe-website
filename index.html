@@ -848,10 +848,29 @@
       function selectNextLink() {
         if (links.length === 0) return;
 
-        if (selectedLinkIndex === null) {
-          selectedLinkIndex = 0;
+        // Start searching after the current selection (or from 0 if none)
+        let start =
+          selectedLinkIndex === null
+            ? 0
+            : (selectedLinkIndex + 1) % links.length;
+        let found = null;
+
+        // Loop through all links at most once and pick the first off-screen link
+        for (let i = 0; i < links.length; i++) {
+          let idx = (start + i) % links.length;
+          let l = links[idx];
+          let onScreen = l.x >= 0 && l.x <= width && l.y >= 0 && l.y <= height;
+          if (!onScreen) {
+            found = idx;
+            break;
+          }
+        }
+
+        if (found !== null) {
+          selectedLinkIndex = found;
         } else {
-          selectedLinkIndex = (selectedLinkIndex + 1) % links.length;
+          // No off-screen links available — clear selection
+          selectedLinkIndex = null;
         }
       }
 
