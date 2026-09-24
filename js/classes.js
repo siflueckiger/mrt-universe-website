@@ -4,10 +4,12 @@ class Star {
   constructor(x, y) {
     this.x = x;
     this.y = y;
-    this.color = color(random(200, 255));
-    this.size = random(1, 4);
-    this.speedMin = 1;
-    this.speedMax = 25;
+    this.color = color(
+      random(GAME_CONFIG.star.colorMin, GAME_CONFIG.star.colorMax)
+    );
+    this.size = random(GAME_CONFIG.star.sizeMin, GAME_CONFIG.star.sizeMax);
+    this.speedMin = GAME_CONFIG.star.speedMin;
+    this.speedMax = GAME_CONFIG.star.speedMax;
     this.speed = random(this.speedMin, this.speedMax);
   }
 
@@ -85,8 +87,8 @@ class Link {
       random(100, 255)
     );
     this.currentColor = this.baseColor;
-    this.txtSize = 24;
-    this.speed = random(7, 10);
+    this.txtSize = GAME_CONFIG.link.titleSize;
+    this.speed = random(GAME_CONFIG.link.speedMin, GAME_CONFIG.link.speedMax);
     this.pulsePhase = random(TWO_PI);
   }
 
@@ -114,7 +116,7 @@ class Link {
     text(this.data.title, this.x, this.y);
 
     // Category badge
-    textSize(12);
+    textSize(GAME_CONFIG.link.badgeSize);
     fill(255, 255, 0, 150);
     text(this.data.category, this.x, this.y + 25);
 
@@ -181,20 +183,21 @@ class Planet {
   constructor(x, y) {
     this.x = x;
     this.y = y;
-    this.speed = random(7, 10);
-    this.size = random(50, 350);
+    this.speed = random(GAME_CONFIG.planet.speedMin, GAME_CONFIG.planet.speedMax);
+    this.size = random(GAME_CONFIG.planet.sizeMin, GAME_CONFIG.planet.sizeMax);
     this.hue = random(360);
+    this.hasRing = random() < GAME_CONFIG.planet.ringChance;
   }
 
   display() {
     push();
     colorMode(HSB);
-    fill(this.hue, 80, 80, 150);
+    fill(this.hue, 80, 80, GAME_CONFIG.planet.alpha);
     noStroke();
     ellipse(this.x, this.y, this.size, this.size);
 
     // Rings for some planets
-    if (random() > 0.7) {
+    if (this.hasRing) {
       noFill();
       stroke(this.hue, 60, 90, 100);
       strokeWeight(3);

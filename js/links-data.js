@@ -89,6 +89,9 @@ function validateLinkData() {
       );
       return;
     }
+    if (typeof link.description !== "string") {
+      link.description = "";
+    }
     valid.push(link);
   });
   return valid;

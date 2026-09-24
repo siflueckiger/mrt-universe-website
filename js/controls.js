@@ -13,7 +13,6 @@ function setupMobileControls() {
   const joystickBase = document.getElementById("joystick-base");
   const joystickStick = document.getElementById("joystick-stick");
   const actionButton = document.getElementById("action-button");
-  const nextLinkButton = document.getElementById("next-link-button");
 
   // Joystick controls
   function handleJoystickStart(e) {
@@ -83,55 +82,24 @@ function setupMobileControls() {
     activateLink();
   });
 
-  // Next link button
-  nextLinkButton.addEventListener("touchstart", (e) => {
-    e.preventDefault();
-    if (!gameState.appReady) return;
-    selectNextLink();
-  });
-
-  nextLinkButton.addEventListener("click", (e) => {
-    e.preventDefault();
-    if (!gameState.appReady) return;
-    selectNextLink();
-  });
-
   // Update button appearances based on link proximity
+  let lastActionable = null;
+
   function updateActionButton() {
-    if (!gameState.appReady) {
-      actionButton.classList.add("inactive");
-      nextLinkButton.classList.add("inactive");
-      return;
-    }
-
-    let selectedLink = null;
-    if (
-      gameState.selectedLinkIndex !== null &&
-      gameState.selectedLinkIndex < links.length
-    ) {
-      selectedLink = links[gameState.selectedLinkIndex];
-    }
-
-    // Action button state — allow opening nearest link if within activationDistance
+    // Action button state — allow opening the target link if within activationDistance
     let actionable = false;
-    if (selectedLink) {
-      let d = selectedLink.getDistance(ship.x, ship.y);
-      actionable = d < GAME_CONFIG.activationDistance;
-    } else if (gameState.nearestLink) {
-      let d = gameState.nearestLink.getDistance(ship.x, ship.y);
-      actionable = d < GAME_CONFIG.activationDistance;
-    }
-    if (actionable && gameState.appReady) {
-      actionButton.classList.remove("inactive");
-    } else {
-      actionButton.classList.add("inactive");
+    if (gameState.appReady) {
+      let target = getTargetLink();
+      if (target) {
+        let d = target.getDistance(ship.x, ship.y);
+        actionable = d < GAME_CONFIG.activationDistance;
+      }
     }
 
-    // Next link button state
-    if (links.length > 0) {
-      nextLinkButton.classList.remove("inactive");
-    } else {
-      nextLinkButton.classList.add("inactive");
+    // Only touch the DOM when the state actually changed
+    if (actionable !== lastActionable) {
+      lastActionable = actionable;
+      actionButton.classList.toggle("inactive", !actionable);
     }
   }
 

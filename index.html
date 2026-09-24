@@ -1,19 +1,37 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Magic Ramba Trash</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E%F0%9F%9B%B8%3C/text%3E%3C/svg%3E"
+    />
     <link rel="stylesheet" href="css/style.css" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"
+      integrity="sha384-DNa3EMEwCbXdWesI58M+KapvoPndaEq/H61SjvIbqhxlLG0vGzqAF3htFLNBL+Z2"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/addons/p5.sound.min.js"
+      integrity="sha384-Ozi5ax1b+B/XBCzskytbAcQlgO0fcBp6gBOgS1SNQgR55vMk33RdVPAAAvB/8kA6"
+      crossorigin="anonymous"
+    ></script>
   </head>
   <body>
     <div id="hud">
       <h3>Magic Ramba Trash Universe</h3>
-      <div id="nearest-link">Erkunde den Raum...</div>
+      <div id="nearest-link">Explore the space...</div>
+      <div class="hud-buttons">
+        <button id="links-button" type="button">Links (L)</button>
+        <button id="info-button" type="button">Info (I)</button>
+        <button id="music-button" type="button">Music (M): ON</button>
+      </div>
     </div>
 
-    <!-- Start menu overlay -->
+    <!-- Info / how-to-play overlay (toggled with I) -->
     <div
       id="start-menu"
       role="dialog"
@@ -23,9 +41,9 @@
       <div class="panel" id="start-panel">
         <h2 id="start-title">Welcome to the Magic Ramba Trash Universe</h2>
         <p>HOW TO PLAY:</p>
-        <ul style="text-align: left; margin: 8px 0 14px 18px">
+        <ul class="start-list">
           <li>
-            Use the <strong>ARROW KEYS</strong> or the
+            Use the <strong>ARROW KEYS</strong>, <strong>WASD</strong> or the
             <strong>JOYSTICK</strong> to navigate and discover links.
           </li>
           <li>
@@ -33,23 +51,34 @@
             links when you're close to one.
           </li>
           <li>
-            <strong>S</strong> or the <strong>NEXT LINK BUTTON</strong> selects
-            links so you can travel to them quickly.
+            <strong>L</strong> or the <strong>LINKS BUTTON</strong> opens the
+            link list to pin any destination.
+          </li>
+          <li>
+            <strong>I</strong> or the <strong>INFO BUTTON</strong> shows this
+            help screen at any time.
           </li>
         </ul>
-        <div
-          id="start-countdown"
-          aria-live="polite"
-          style="color: #9fe; margin-bottom: 10px"
-        ></div>
-        <button id="start-button" type="button">Start</button>
+        <button id="start-button" type="button">Close (I)</button>
+      </div>
+    </div>
+
+    <!-- Link list overlay -->
+    <div id="links-list" role="dialog" aria-modal="true" aria-label="Links">
+      <div class="panel" id="links-list-panel">
+        <h3 id="links-list-title">All Links</h3>
+        <ul id="links-list-items"></ul>
+        <div id="links-list-hint">↑ ↓ / W S select · ENTER pin · I info · ESC close</div>
+        <div class="links-list-actions">
+          <button id="links-list-info" type="button">Info (I)</button>
+          <button id="links-list-close" type="button">Close</button>
+        </div>
       </div>
     </div>
 
     <div id="controls">
-      <strong>Steuerung:</strong><br />
-      ← → ↑ ↓ Navigation<br />
-      <span style="color: #00ffff">ENTER/LEERTASTE</span> = Link öffnen
+      ← → ↑ ↓ / WASD Move<br />
+      <span style="color: #00ffff">ENTER/SPACE</span> = Open link
     </div>
 
     <div id="mobile-controls">
@@ -58,16 +87,19 @@
           <div id="joystick-stick"></div>
         </div>
       </div>
-      <div id="action-button" class="inactive">⏎</div>
-      <div id="next-link-button" class="inactive">→</div>
+      <div id="action-button" class="inactive" role="button" aria-label="Open link">⏎</div>
     </div>
 
-    <!-- Load order matters: config → data → classes → ui → controls → game -->
+    <!-- CRT/scanline overlay, pure visual (toggled via GAME_CONFIG.visual) -->
+    <div id="crt-overlay"></div>
+
+    <!-- Load order matters: config → data → classes → ui → controls → sound → game -->
     <script src="js/config.js"></script>
     <script src="js/links-data.js"></script>
     <script src="js/classes.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/controls.js"></script>
+    <script src="js/sound.js"></script>
     <script src="js/game.js"></script>
   </body>
 </html>

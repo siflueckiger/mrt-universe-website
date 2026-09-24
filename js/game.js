@@ -2,8 +2,8 @@
 // Central mutable state — single source of truth shared across files.
 
 const gameState = {
-  // whether the app has finished loading and user dismissed the start menu
-  appReady: false,
+  // the game is playable immediately; the info menu is optional (I key)
+  appReady: true,
   nearestLink: null,
   selectedLinkIndex: null,
   // current extra acceleration multiplier (0..maxAccMultiplier)
@@ -17,6 +17,9 @@ let ship;
 let links = [];
 let navi = [];
 let planets = [];
+
+// Titles of links the player has opened (session-only, resets on reload)
+let visited = new Set();
 
 // ==================== P5.JS SETUP ====================
 
@@ -33,11 +36,41 @@ function setup() {
   // Ship
   ship = new Ship(width / 2, height / 2);
 
-  // Links
+  // Links — rejection-sample positions so links never spawn too close to
+  // each other or to the ship (falls back to the most spaced candidate).
   for (let i = 0; i < linkData.length; i++) {
-    let x = random(GAME_CONFIG.worldBounds.minX, width + GAME_CONFIG.worldBounds.maxX);
-    let y = random(GAME_CONFIG.worldBounds.minY, height + GAME_CONFIG.worldBounds.maxY);
-    links.push(new Link(x, y, linkData[i]));
+    const minLink = GAME_CONFIG.link.minDistance;
+    const minShip = GAME_CONFIG.link.minShipDistance;
+    let bestX = 0;
+    let bestY = 0;
+    let bestScore = -1;
+    for (let attempt = 0; attempt < 200; attempt++) {
+      let cx = random(
+        GAME_CONFIG.worldBounds.minX,
+        width + GAME_CONFIG.worldBounds.maxX
+      );
+      let cy = random(
+        GAME_CONFIG.worldBounds.minY,
+        height + GAME_CONFIG.worldBounds.maxY
+      );
+      let closestLink = Infinity;
+      for (let other of links) {
+        closestLink = Math.min(closestLink, dist(cx, cy, other.x, other.y));
+      }
+      let shipDist = dist(cx, cy, ship.x, ship.y);
+      let score = Math.min(closestLink, shipDist);
+      if (score > bestScore) {
+        bestScore = score;
+        bestX = cx;
+        bestY = cy;
+      }
+      if (closestLink >= minLink && shipDist >= minShip) {
+        bestX = cx;
+        bestY = cy;
+        break;
+      }
+    }
+    links.push(new Link(bestX, bestY, linkData[i]));
     navi.push(new Navigator());
   }
 
@@ -161,11 +194,14 @@ function draw() {
   // Ship
   ship.display();
 
+  // Mini-map of the world
+  drawMinimap();
+
   // Handle input
   handleInput();
 
   // Update HUD
-  updateHUD(minDist);
+  updateHUD();
 
   // Update mobile action button state
   if (window.updateActionButton) {
@@ -176,22 +212,25 @@ function draw() {
 // ==================== INPUT HANDLING ====================
 
 function handleInput() {
-  // Ignore input until app is ready
-  if (!gameState.appReady) return;
-  // Determine input direction from keyboard and joystick
+  // Ignore input until app is ready or while an overlay is open
+  if (!gameState.appReady || linksListOpen || infoMenuOpen) {
+    setFlying(false);
+    return;
+  }
+  // Determine input direction from keyboard (arrows or WASD) and joystick
   let inputX = 0;
   let inputY = 0;
-  if (keyIsDown(LEFT_ARROW)) {
-    inputX -= 1;
+  if (keyIsDown(LEFT_ARROW) || keyIsDown(65)) {
+    inputX -= 1; // left / A
   }
-  if (keyIsDown(RIGHT_ARROW)) {
-    inputX += 1;
+  if (keyIsDown(RIGHT_ARROW) || keyIsDown(68)) {
+    inputX += 1; // right / D
   }
-  if (keyIsDown(UP_ARROW)) {
-    inputY -= 1;
+  if (keyIsDown(UP_ARROW) || keyIsDown(87)) {
+    inputY -= 1; // up / W
   }
-  if (keyIsDown(DOWN_ARROW)) {
-    inputY += 1;
+  if (keyIsDown(DOWN_ARROW) || keyIsDown(83)) {
+    inputY += 1; // down / S
   }
 
   // Add joystick direction (analog)
@@ -204,107 +243,104 @@ function handleInput() {
 
   let moving = inputX !== 0 || inputY !== 0;
 
-  // If the selected link is on-screen or within activation distance, stop movement, reset acceleration and deselect
+  // If the pinned link is within activation distance, stop movement,
+  // reset acceleration and deselect
+  let blocked = false;
   if (
     gameState.selectedLinkIndex !== null &&
     gameState.selectedLinkIndex < links.length
   ) {
     let selReach = links[gameState.selectedLinkIndex];
-
-    // On-screen check: deselect as soon as the link is visible on the canvas
-    if (
-      selReach.x >= 0 &&
-      selReach.x <= width &&
-      selReach.y >= 0 &&
-      selReach.y <= height
-    ) {
-      gameState.accelerationFactor = 0;
-      gameState.selectedLinkIndex = null;
-      return;
-    }
-
     let dReach = selReach.getDistance(ship.x, ship.y);
     if (dReach <= GAME_CONFIG.activationDistance) {
       // we reached the link; stop movement, reset acceleration and deselect it
       gameState.accelerationFactor = 0;
       gameState.selectedLinkIndex = null;
-      return;
+      playSound("reach");
+      blocked = true;
     }
   }
 
-  // Acceleration towards selected link when moving in its direction
-  if (
-    gameState.selectedLinkIndex !== null &&
-    gameState.selectedLinkIndex < links.length &&
-    moving
-  ) {
-    let sel = links[gameState.selectedLinkIndex];
-    let lx = sel.x - ship.x;
-    let ly = sel.y - ship.y;
-    let distToLink = Math.sqrt(lx * lx + ly * ly);
+  if (!blocked) {
+    let hasTarget =
+      gameState.selectedLinkIndex !== null &&
+      gameState.selectedLinkIndex < links.length;
 
-    if (distToLink > 0) {
-      let nlx = lx / distToLink;
-      let nly = ly / distToLink;
+    if (!moving) {
+      // Braking: drop straight back to basic speed so the next
+      // movement always starts from baseSpeed again.
+      gameState.accelerationFactor = 0;
+    } else if (hasTarget) {
+      let sel = links[gameState.selectedLinkIndex];
+      let lx = sel.x - ship.x;
+      let ly = sel.y - ship.y;
+      let distToLink = Math.sqrt(lx * lx + ly * ly);
 
-      let lenInput = Math.sqrt(inputX * inputX + inputY * inputY);
-      let nix = inputX / lenInput;
-      let niy = inputY / lenInput;
+      if (distToLink > 0) {
+        let nlx = lx / distToLink;
+        let nly = ly / distToLink;
 
-      // dot product: 1 means exact same direction
-      let dot = nlx * nix + nly * niy;
+        let lenInput = Math.sqrt(inputX * inputX + inputY * inputY);
+        let nix = inputX / lenInput;
+        let niy = inputY / lenInput;
 
-      if (dot > 0.7) {
-        gameState.accelerationFactor = Math.min(
-          GAME_CONFIG.movement.maxAccMultiplier,
-          gameState.accelerationFactor + GAME_CONFIG.movement.accRate
-        );
+        // dot product: 1 means exact same direction
+        let dot = nlx * nix + nly * niy;
+
+        if (dot > 0.4) {
+          // moving towards the pinned link: ramp up smoothly
+          gameState.accelerationFactor = Math.min(
+            GAME_CONFIG.movement.maxAccMultiplier,
+            gameState.accelerationFactor + GAME_CONFIG.movement.accRate
+          );
+        } else {
+          // steering away: also counts as braking
+          gameState.accelerationFactor = 0;
+        }
       } else {
-        gameState.accelerationFactor = Math.max(
-          0,
-          gameState.accelerationFactor - GAME_CONFIG.movement.decRate
-        );
+        gameState.accelerationFactor = 0;
       }
     } else {
-      gameState.accelerationFactor = 0;
+      // moving without a pinned link: let the stored speed decay
+      gameState.accelerationFactor = Math.max(
+        0,
+        gameState.accelerationFactor - GAME_CONFIG.movement.decRate
+      );
     }
-  } else {
-    // decay acceleration when not moving toward selected link
-    gameState.accelerationFactor = Math.max(
-      0,
-      gameState.accelerationFactor - GAME_CONFIG.movement.decRate
-    );
-  }
 
-  // Compute move speeds including acceleration
-  let moveSpeed =
-    GAME_CONFIG.movement.baseSpeed * (1 + gameState.accelerationFactor);
+    // Compute move speeds including acceleration
+    let moveSpeed =
+      GAME_CONFIG.movement.baseSpeed * (1 + gameState.accelerationFactor);
 
-  // Keyboard movement (preserve original sign convention)
-  if (keyIsDown(LEFT_ARROW)) {
-    moveObjects("x", moveSpeed);
-  }
-  if (keyIsDown(RIGHT_ARROW)) {
-    moveObjects("x", -moveSpeed);
-  }
-  if (keyIsDown(UP_ARROW)) {
-    moveObjects("y", moveSpeed);
-  }
-  if (keyIsDown(DOWN_ARROW)) {
-    moveObjects("y", -moveSpeed);
-  }
-
-  // Joystick controls (scaled and affected by acceleration)
-  if (joystick.active) {
-    let speedMultiplier =
-      GAME_CONFIG.joystick.speedScale * (1 + gameState.accelerationFactor);
-    if (Math.abs(joystick.deltaX) > GAME_CONFIG.joystick.deadzone) {
-      moveObjects("x", -joystick.deltaX * speedMultiplier);
+    // Keyboard movement (arrows or WASD; preserve original sign convention)
+    if (keyIsDown(LEFT_ARROW) || keyIsDown(65)) {
+      moveObjects("x", moveSpeed);
     }
-    if (Math.abs(joystick.deltaY) > GAME_CONFIG.joystick.deadzone) {
-      moveObjects("y", -joystick.deltaY * speedMultiplier);
+    if (keyIsDown(RIGHT_ARROW) || keyIsDown(68)) {
+      moveObjects("x", -moveSpeed);
+    }
+    if (keyIsDown(UP_ARROW) || keyIsDown(87)) {
+      moveObjects("y", moveSpeed);
+    }
+    if (keyIsDown(DOWN_ARROW) || keyIsDown(83)) {
+      moveObjects("y", -moveSpeed);
+    }
+
+    // Joystick controls (scaled and affected by acceleration)
+    if (joystick.active) {
+      let speedMultiplier =
+        GAME_CONFIG.joystick.speedScale * (1 + gameState.accelerationFactor);
+      if (Math.abs(joystick.deltaX) > GAME_CONFIG.joystick.deadzone) {
+        moveObjects("x", -joystick.deltaX * speedMultiplier);
+      }
+      if (Math.abs(joystick.deltaY) > GAME_CONFIG.joystick.deadzone) {
+        moveObjects("y", -joystick.deltaY * speedMultiplier);
+      }
     }
   }
+
+  // UFO hum while the ship is moving
+  setFlying(!blocked && moving);
 }
 
 function moveObjects(axis, speed) {
@@ -320,18 +356,40 @@ function moveObjects(axis, speed) {
 }
 
 function keyPressed() {
-  if (!gameState.appReady) return; // ignore keys until start menu dismissed
+  if (!gameState.appReady) return; // ignore keys until the game is ready
+  // Info/how-to-play toggle (I). The link list handles I in its own listener.
+  if (!linksListOpen && (key === "i" || key === "I")) {
+    toggleInfoMenu();
+    return;
+  }
+  // While the info menu is open, only ESC and M do anything
+  if (infoMenuOpen) {
+    if (key === "Escape") closeInfoMenu();
+    if (key === "m" || key === "M") toggleSound();
+    return;
+  }
+  // Toggle the link list on L key
+  if (key === "l" || key === "L") {
+    toggleLinksList();
+    return;
+  }
+  // Ignore other keys while the link list is open (ESC is handled in ui.js)
+  if (linksListOpen) return;
   // Open link on ENTER or SPACE
   if ((key === "Enter" || key === " ") && gameState.nearestLink) {
     tryOpenLink(gameState.nearestLink);
   }
-  // Next link on S key
-  if (key === "s" || key === "S") {
-    selectNextLink();
-  }
   // Deselect on ESC key
   if (key === "Escape") {
+    if (gameState.selectedLinkIndex !== null) {
+      playSound("deselect");
+    }
     gameState.selectedLinkIndex = null;
+    gameState.accelerationFactor = 0;
+  }
+  // Toggle sound on M key
+  if (key === "m" || key === "M") {
+    toggleSound();
   }
 }
 
@@ -343,60 +401,126 @@ function windowResized() {
 
 // ==================== LINK SELECTION / ACTIVATION ====================
 
-function selectNextLink() {
-  if (links.length === 0) return;
-
-  // Start searching after the current selection (or from 0 if none)
-  let start =
-    gameState.selectedLinkIndex === null
-      ? 0
-      : (gameState.selectedLinkIndex + 1) % links.length;
-  let found = null;
-
-  // Loop through all links at most once and pick the first off-screen link
-  for (let i = 0; i < links.length; i++) {
-    let idx = (start + i) % links.length;
-    let l = links[idx];
-    let onScreen = l.x >= 0 && l.x <= width && l.y >= 0 && l.y <= height;
-    if (!onScreen) {
-      found = idx;
-      break;
-    }
-  }
-
-  if (found !== null) {
-    gameState.selectedLinkIndex = found;
-  } else {
-    // No off-screen links available — clear selection
-    gameState.selectedLinkIndex = null;
-  }
-}
-
 // Single entry point for opening a link (keyboard + mobile button)
 function tryOpenLink(link) {
   if (!link) return;
   let d = link.getDistance(ship.x, ship.y);
   if (d < GAME_CONFIG.activationDistance) {
-    window.open(link.data.url, "_blank");
+    window.open(link.data.url, "_blank", "noopener");
     // reset acceleration when a link is reached/opened
     gameState.accelerationFactor = 0;
+    gameState.selectedLinkIndex = null;
+    markVisited(link);
+    playSound("open");
   }
 }
 
-function activateLink() {
-  if (!gameState.appReady) return;
-  // Prefer selected link, fall back to nearest link if close enough
-  let linkToOpen = null;
+// The link the player is currently targeting: selected one, else nearest
+function getTargetLink() {
   if (
     gameState.selectedLinkIndex !== null &&
     gameState.selectedLinkIndex < links.length
   ) {
-    linkToOpen = links[gameState.selectedLinkIndex];
-  } else if (gameState.nearestLink) {
-    linkToOpen = gameState.nearestLink;
+    return links[gameState.selectedLinkIndex];
+  }
+  return gameState.nearestLink || null;
+}
+
+function activateLink() {
+  if (!gameState.appReady) return;
+  tryOpenLink(getTargetLink());
+}
+
+// ==================== VISITED LINKS ====================
+// Session-only: the set starts empty on every page load.
+
+function isVisited(link) {
+  return visited.has(link.data.title);
+}
+
+function markVisited(link) {
+  if (visited.has(link.data.title)) return false;
+  visited.add(link.data.title);
+  return true;
+}
+
+// ==================== MINI-MAP ====================
+
+function drawMinimap() {
+  const cfg = GAME_CONFIG.minimap;
+  const isMobile =
+    typeof mobileQuery !== "undefined" && mobileQuery.matches;
+  const x = width - cfg.size - cfg.margin;
+  const y = isMobile ? cfg.topMobile : cfg.top;
+
+  // World bounds = bounding box of all links + ship
+  let minX = ship.x;
+  let minY = ship.y;
+  let maxX = ship.x;
+  let maxY = ship.y;
+  for (let l of links) {
+    minX = Math.min(minX, l.x);
+    minY = Math.min(minY, l.y);
+    maxX = Math.max(maxX, l.x);
+    maxY = Math.max(maxY, l.y);
   }
 
-  tryOpenLink(linkToOpen);
+  push();
+  noStroke();
+  fill(0, 0, 20, 180);
+  rect(x, y, cfg.size, cfg.size, 4);
+  stroke(0, 255, 255, 90);
+  strokeWeight(1);
+  noFill();
+  rect(x, y, cfg.size, cfg.size, 4);
+  noStroke();
+
+  for (let i = 0; i < links.length; i++) {
+    let l = links[i];
+    let mx = map(l.x, minX, maxX, x + 4, x + cfg.size - 4);
+    let my = map(l.y, minY, maxY, y + 4, y + cfg.size - 4);
+    if (l === gameState.nearestLink) {
+      fill(0, 255, 255);
+      rect(mx - 2, my - 2, 4, 4);
+    } else if (
+      gameState.selectedLinkIndex !== null &&
+      links[gameState.selectedLinkIndex] === l
+    ) {
+      fill(0, 255, 0);
+      rect(mx - 2, my - 2, 4, 4);
+    } else if (isVisited(l)) {
+      // visited: small and faint
+      fill(120, 120, 120, 90);
+      rect(mx - 1.5, my - 1.5, 3, 3);
+    } else {
+      // unvisited: bright yellow and pulsing so it stands out
+      let pulse = 1 + 0.35 * sin(frameCount * 0.1 + i * 1.7);
+      let s = 5 * pulse;
+      fill(255, 220, 0);
+      rect(mx - s / 2, my - s / 2, s, s);
+    }
+  }
+
+  fill(255, 0, 255);
+  let sx = map(ship.x, minX, maxX, x + 4, x + cfg.size - 4);
+  let sy = map(ship.y, minY, maxY, y + 4, y + cfg.size - 4);
+  rect(sx - 2, sy - 2, 4, 4);
+
+  // Legend: yellow = unvisited, gray = visited
+  textAlign(LEFT, TOP);
+  textSize(10);
+  let lx = x;
+  let ly = y + cfg.size + 8;
+  fill(255, 220, 0);
+  text("●", lx, ly);
+  fill(255, 255, 255, 180);
+  text("new", lx + 12, ly);
+  fill(120, 120, 120);
+  text("●", lx + 40, ly);
+  fill(255, 255, 255, 180);
+  text("visited", lx + 52, ly);
+
+  pop();
 }
 
 // ==================== BOOT ====================
@@ -408,10 +532,16 @@ function bootGame() {
     const hud = document.getElementById("nearest-link");
     if (hud) {
       hud.innerHTML =
-        '<strong style="color: #ff5555">Fehler:</strong> p5.js konnte nicht geladen werden. Bitte Internetverbindung prüfen und die Seite neu laden.';
+        '<strong style="color: #ff5555">Error:</strong> p5.js could not be loaded. Please check your internet connection and reload the page.';
     }
     return;
   }
-  initStartMenu();
+  if (!GAME_CONFIG.visual.crtOverlay) {
+    const crt = document.getElementById("crt-overlay");
+    if (crt) crt.remove();
+  }
+  initInfoMenu();
+  initLinksList();
+  initSoundButton();
 }
 bootGame();
