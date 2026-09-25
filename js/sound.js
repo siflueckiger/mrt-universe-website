@@ -71,6 +71,12 @@ function playSound(name) {
     case "warpEnd":
       blip(900, 200, 0.28, "square", 0.6);
       break;
+    case "pickup":
+      blip(660, 660, 0.06, "square", 0.7);
+      setTimeout(function () {
+        blip(990, 990, 0.12, "square", 0.7);
+      }, 60);
+      break;
   }
 }
 

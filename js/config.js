@@ -6,7 +6,7 @@ const GAME_CONFIG = {
   navBorder: 25,
   worldBounds: { minX: -3000, minY: -3000, maxX: 3000, maxY: 3000 },
   activationDistance: 150,
-  counts: { stars: 333, planets: 15, nebulae: 8, asteroids: 25 },
+  counts: { stars: 333, planets: 15, nebulae: 8, asteroids: 25, trash: 20 },
   movement: {
     baseSpeed: 1,
     accRate: 0.2,
@@ -74,6 +74,17 @@ const GAME_CONFIG = {
     maxCount: 160,
     lifespan: 70,
     size: 5,
+  },
+  trash: {
+    speedMin: 5,
+    speedMax: 8,
+    sizeMin: 22,
+    sizeMax: 38,
+    rotSpeedMax: 0.03,
+    pickupDistance: 42,
+    // Optional PNG/GIF filenames inside assets/trash/. Empty = procedural
+    // pixel-art junk (floppy, can, bottle, monitor).
+    items: [],
   },
   minimap: {
     size: 120,

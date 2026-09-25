@@ -336,3 +336,117 @@ class ThrusterParticle {
   }
 }
 
+// ==================== TRASH COLLECTIBLES ====================
+// Optional external sprites from assets/trash/ (PNG or animated GIF). If
+// none load (or GAME_CONFIG.trash.items is empty), each piece falls back
+// to procedural pixel art so the feature works before any art exists.
+
+let trashImages = [];
+
+function loadTrashImages() {
+  trashImages = [];
+  const items = GAME_CONFIG.trash.items || [];
+  for (let i = 0; i < items.length; i++) {
+    loadImage(
+      "assets/trash/" + items[i],
+      function (img) {
+        trashImages.push(img);
+      },
+      function () {
+        // Missing/broken asset: ignore, procedural art is used instead
+      }
+    );
+  }
+}
+
+class Trash {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.speed = random(GAME_CONFIG.trash.speedMin, GAME_CONFIG.trash.speedMax);
+    this.size = random(GAME_CONFIG.trash.sizeMin, GAME_CONFIG.trash.sizeMax);
+    this.angle = random(TWO_PI);
+    this.rotSpeed = random(
+      -GAME_CONFIG.trash.rotSpeedMax,
+      GAME_CONFIG.trash.rotSpeedMax
+    );
+    this.kind = random(["floppy", "can", "bottle", "monitor"]);
+    this.imageIndex = Math.floor(random(1000));
+  }
+
+  update() {
+    this.angle += this.rotSpeed;
+  }
+
+  getDistance(x, y) {
+    return dist(this.x, this.y, x, y);
+  }
+
+  display() {
+    const img = trashImages.length
+      ? trashImages[this.imageIndex % trashImages.length]
+      : null;
+    push();
+    translate(this.x, this.y);
+    rotate(this.angle);
+    if (img) {
+      imageMode(CENTER);
+      image(img, 0, 0, this.size, this.size);
+    } else {
+      this.drawKind();
+    }
+    pop();
+  }
+
+  drawKind() {
+    const s = this.size;
+    noStroke();
+    switch (this.kind) {
+      case "floppy":
+        fill(30, 30, 60);
+        stroke(0, 200, 255);
+        strokeWeight(1.5);
+        rect(-s / 2, -s / 2, s, s, 3);
+        noStroke();
+        fill(200, 200, 210);
+        rect(-s * 0.28, -s * 0.45, s * 0.4, s * 0.28);
+        fill(255, 220, 0);
+        rect(-s * 0.3, s * 0.05, s * 0.6, s * 0.3);
+        break;
+      case "can":
+        fill(200, 40, 60);
+        stroke(255, 150, 150);
+        strokeWeight(1);
+        rect(-s * 0.25, -s * 0.4, s * 0.5, s * 0.8, 4);
+        noStroke();
+        fill(220, 220, 220);
+        ellipse(0, -s * 0.4, s * 0.5, s * 0.16);
+        fill(255, 255, 255, 120);
+        rect(-s * 0.15, -s * 0.3, s * 0.06, s * 0.6);
+        break;
+      case "bottle":
+        fill(40, 160, 90);
+        stroke(180, 255, 200);
+        strokeWeight(1);
+        rect(-s * 0.18, -s * 0.2, s * 0.36, s * 0.6, 3);
+        rect(-s * 0.09, -s * 0.45, s * 0.18, s * 0.28);
+        noStroke();
+        fill(255, 255, 255, 100);
+        rect(-s * 0.1, -s * 0.1, s * 0.06, s * 0.4);
+        break;
+      case "monitor":
+        fill(120, 120, 130);
+        stroke(200, 200, 210);
+        strokeWeight(1.5);
+        rect(-s * 0.45, -s * 0.4, s * 0.9, s * 0.66, 3);
+        noStroke();
+        fill(0, 60, 60);
+        rect(-s * 0.36, -s * 0.32, s * 0.72, s * 0.5);
+        fill(0, 255, 200);
+        rect(-s * 0.3, -s * 0.26, s * 0.2, s * 0.08);
+        break;
+    }
+  }
+}
+
+

@@ -22,6 +22,10 @@ let planets = [];
 let nebulae = [];
 let asteroids = [];
 let particles = [];
+let trash = [];
+
+// Number of trash pieces collected this session (depletes; resets on reload)
+let trashCollected = 0;
 
 // Screen-space hyperspace streaks shown while warping
 let warpStreaks = [];
@@ -106,6 +110,33 @@ function setup() {
     asteroids.push(new Asteroid(x, y));
   }
 
+  // Trash collectibles — optional external sprites plus procedural fallback
+  loadTrashImages();
+  for (let i = 0; i < GAME_CONFIG.counts.trash; i++) {
+    let tx = 0;
+    let ty = 0;
+    let bestScore = -1;
+    for (let attempt = 0; attempt < 120; attempt++) {
+      let cx = random(GAME_CONFIG.worldBounds.minX, width + GAME_CONFIG.worldBounds.maxX);
+      let cy = random(GAME_CONFIG.worldBounds.minY, height + GAME_CONFIG.worldBounds.maxY);
+      let closest = Infinity;
+      for (let link of links) {
+        closest = Math.min(closest, dist(cx, cy, link.x, link.y));
+      }
+      let shipDist = dist(cx, cy, ship.x, ship.y);
+      let score = Math.min(closest, shipDist);
+      if (score > bestScore) {
+        bestScore = score;
+        tx = cx;
+        ty = cy;
+      }
+      if (closest >= GAME_CONFIG.link.minDistance && shipDist >= GAME_CONFIG.link.minShipDistance) {
+        break;
+      }
+    }
+    trash.push(new Trash(tx, ty));
+  }
+
   // Mobile controls
   setupMobileControls();
 }
@@ -138,6 +169,16 @@ function draw() {
   // Planets
   for (let planet of planets) {
     planet.display();
+  }
+
+  // Trash collectibles (update, draw, and check for pickups)
+  for (let i = trash.length - 1; i >= 0; i--) {
+    let t = trash[i];
+    t.update();
+    t.display();
+    if (t.getDistance(ship.x, ship.y) <= GAME_CONFIG.trash.pickupDistance) {
+      collectTrash(i);
+    }
   }
 
   // Find nearest link
@@ -440,6 +481,26 @@ function moveObjects(axis, speed) {
   }
   for (let asteroid of asteroids) {
     asteroid[axis] += asteroid.speed * speed;
+  }
+  for (let t of trash) {
+    t[axis] += t.speed * speed;
+  }
+}
+
+// Pick up a trash piece: remove it, bump the counter, blip and burst
+function collectTrash(i) {
+  const t = trash[i];
+  if (!t) return;
+  trash.splice(i, 1);
+  trashCollected++;
+  playSound("pickup");
+  for (let k = 0; k < 8; k++) {
+    if (particles.length >= GAME_CONFIG.particles.maxCount) break;
+    let a = random(TWO_PI);
+    let sp = random(1, 3);
+    particles.push(
+      new ThrusterParticle(t.x, t.y, Math.cos(a) * sp, Math.sin(a) * sp)
+    );
   }
 }
 
