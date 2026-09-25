@@ -6,12 +6,20 @@ const GAME_CONFIG = {
   navBorder: 25,
   worldBounds: { minX: -3000, minY: -3000, maxX: 3000, maxY: 3000 },
   activationDistance: 150,
-  counts: { stars: 333, planets: 15 },
+  counts: { stars: 333, planets: 15, nebulae: 8, asteroids: 25 },
   movement: {
     baseSpeed: 1,
     accRate: 0.2,
     decRate: 0.1,
     maxAccMultiplier: 10,
+  },
+  warp: {
+    // Autopilot hyperdrive toward the pinned link (J)
+    speedMultiplier: 16,
+    streaks: 90,
+    streakSpeedMin: 18,
+    streakSpeedMax: 38,
+    emissiveParticles: 3,
   },
   joystick: {
     maxDistance: 35,
@@ -42,6 +50,30 @@ const GAME_CONFIG = {
     sizeMax: 350,
     ringChance: 0.3,
     alpha: 150,
+  },
+  nebula: {
+    speedMin: 4,
+    speedMax: 6,
+    sizeMin: 250,
+    sizeMax: 550,
+    puffCount: 9,
+    alpha: 16,
+    // Slow independent drift so the clouds feel alive even when idle
+    driftSpeed: 0.18,
+  },
+  asteroid: {
+    speedMin: 7,
+    speedMax: 10,
+    sizeMin: 20,
+    sizeMax: 65,
+    vertexMin: 5,
+    vertexMax: 9,
+    rotSpeedMax: 0.02,
+  },
+  particles: {
+    maxCount: 160,
+    lifespan: 70,
+    size: 5,
   },
   minimap: {
     size: 120,

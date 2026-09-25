@@ -40,6 +40,7 @@ body {
   margin-top: 10px;
 }
 #links-button,
+#warp-button,
 #info-button,
 #music-button {
   display: block;
@@ -58,6 +59,7 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 #links-button:hover,
+#warp-button:hover,
 #info-button:hover,
 #music-button:hover {
   background: rgba(0, 255, 255, 0.15);
@@ -65,6 +67,15 @@ body {
 #music-button.muted {
   color: #888;
   border-color: rgba(136, 136, 136, 0.6);
+}
+#warp-button.disabled {
+  color: #888;
+  border-color: rgba(136, 136, 136, 0.6);
+}
+#warp-button.warping {
+  color: #001018;
+  background: #00ffff;
+  animation: blink 0.6s steps(1) infinite;
 }
 @keyframes blink {
   0%,

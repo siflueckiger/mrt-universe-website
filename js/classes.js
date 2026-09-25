@@ -206,3 +206,133 @@ class Planet {
     pop();
   }
 }
+
+class Nebula {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.speed = random(GAME_CONFIG.nebula.speedMin, GAME_CONFIG.nebula.speedMax);
+    this.size = random(GAME_CONFIG.nebula.sizeMin, GAME_CONFIG.nebula.sizeMax);
+    this.hue = random([260, 290, 320, 180, 200]); // violet, purple, magenta, cyan, teal
+    // Independent ambient drift (world-space pixels per frame)
+    let driftAngle = random(TWO_PI);
+    this.driftX = cos(driftAngle) * GAME_CONFIG.nebula.driftSpeed;
+    this.driftY = sin(driftAngle) * GAME_CONFIG.nebula.driftSpeed;
+    this.puffs = [];
+    const count = GAME_CONFIG.nebula.puffCount;
+    for (let i = 0; i < count; i++) {
+      this.puffs.push({
+        offsetX: random(-this.size * 0.5, this.size * 0.5),
+        offsetY: random(-this.size * 0.5, this.size * 0.5),
+        radius: random(this.size * 0.3, this.size * 0.7),
+        hueOffset: random(-25, 25),
+      });
+    }
+  }
+
+  update() {
+    this.x += this.driftX;
+    this.y += this.driftY;
+  }
+
+  display() {
+    push();
+    colorMode(HSB);
+    blendMode(SCREEN);
+    noStroke();
+    for (let puff of this.puffs) {
+      fill(
+        (this.hue + puff.hueOffset + 360) % 360,
+        80,
+        70,
+        GAME_CONFIG.nebula.alpha
+      );
+      ellipse(this.x + puff.offsetX, this.y + puff.offsetY, puff.radius, puff.radius);
+    }
+    pop();
+  }
+}
+
+class Asteroid {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.speed = random(GAME_CONFIG.asteroid.speedMin, GAME_CONFIG.asteroid.speedMax);
+    this.size = random(GAME_CONFIG.asteroid.sizeMin, GAME_CONFIG.asteroid.sizeMax);
+    this.angle = random(TWO_PI);
+    this.rotSpeed = random(-GAME_CONFIG.asteroid.rotSpeedMax, GAME_CONFIG.asteroid.rotSpeedMax);
+    this.shade = random(70, 130);
+    this.vertices = [];
+    const numVerts = Math.floor(
+      random(GAME_CONFIG.asteroid.vertexMin, GAME_CONFIG.asteroid.vertexMax)
+    );
+    for (let i = 0; i < numVerts; i++) {
+      let a = map(i, 0, numVerts, 0, TWO_PI);
+      let r = (this.size / 2) * random(0.7, 1.25);
+      this.vertices.push({ x: cos(a) * r, y: sin(a) * r });
+    }
+  }
+
+  update() {
+    this.angle += this.rotSpeed;
+  }
+
+  display() {
+    push();
+    translate(this.x, this.y);
+    rotate(this.angle);
+    fill(this.shade);
+    stroke(this.shade + 40);
+    strokeWeight(1.5);
+    beginShape();
+    for (let v of this.vertices) {
+      vertex(v.x, v.y);
+    }
+    endShape(CLOSE);
+    // Low-fi crater mark
+    noStroke();
+    fill(this.shade - 30, 180);
+    ellipse(this.size * 0.15, -this.size * 0.1, this.size * 0.22, this.size * 0.18);
+    pop();
+  }
+}
+
+class ThrusterParticle {
+  constructor(x, y, vx, vy) {
+    this.x = x;
+    this.y = y;
+    this.vx = vx + random(-0.4, 0.4);
+    this.vy = vy + random(-0.4, 0.4);
+    this.lifespan = GAME_CONFIG.particles.lifespan;
+    this.maxLife = GAME_CONFIG.particles.lifespan;
+    this.size = GAME_CONFIG.particles.size * random(0.7, 1.3);
+    this.colorType = random(["cyan", "magenta", "yellow"]);
+  }
+
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.lifespan--;
+  }
+
+  isDead() {
+    return this.lifespan <= 0;
+  }
+
+  display() {
+    push();
+    noStroke();
+    let alpha = map(this.lifespan, 0, this.maxLife, 0, 230);
+    if (this.colorType === "cyan") {
+      fill(0, 255, 255, alpha);
+    } else if (this.colorType === "magenta") {
+      fill(255, 0, 220, alpha);
+    } else {
+      fill(255, 255, 100, alpha);
+    }
+    // Retro square pixel stardust
+    rect(this.x, this.y, this.size, this.size);
+    pop();
+  }
+}
+
