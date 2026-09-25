@@ -10,6 +10,11 @@ const gameState = {
   accelerationFactor: 0,
   // autopilot hyperdrive toward the pinned link (J)
   warpActive: false,
+  // end-game reward: cat-headed ship of destruction (C toggles for debug)
+  catMode: false,
+  laserTarget: null,
+  laserFrames: 0,
+  screenShakeFrames: 0,
 };
 
 // ==================== GLOBALS ====================
@@ -26,6 +31,9 @@ let trash = [];
 
 // Number of trash pieces collected this session (depletes; resets on reload)
 let trashCollected = 0;
+
+// Cat-mode explosion shards + shockwave rings
+let explosions = [];
 
 // Screen-space hyperspace streaks shown while warping
 let warpStreaks = [];
@@ -112,6 +120,7 @@ function setup() {
 
   // Trash collectibles — optional external sprites plus procedural fallback
   loadTrashImages();
+  loadCatImage();
   for (let i = 0; i < GAME_CONFIG.counts.trash; i++) {
     let tx = 0;
     let ty = 0;
@@ -137,6 +146,16 @@ function setup() {
     trash.push(new Trash(tx, ty));
   }
 
+  // Debug: boot straight into Cat Chaos via ?chaos=1 / ?cat=1
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("chaos") === "1" || params.get("cat") === "1") {
+      setCatMode(true);
+    }
+  } catch (e) {
+    // URLSearchParams unavailable: ignore
+  }
+
   // Mobile controls
   setupMobileControls();
 }
@@ -145,6 +164,16 @@ function setup() {
 
 function draw() {
   background(10, 10, 30);
+
+  // Cat-mode destruction screen shake (world only; HUD/minimap stay stable)
+  const shaking = gameState.screenShakeFrames > 0;
+  if (shaking) {
+    const s = GAME_CONFIG.catMode.screenShake;
+    push();
+    translate(random(-s, s), random(-s, s));
+    gameState.screenShakeFrames--;
+  }
+  if (gameState.laserFrames > 0) gameState.laserFrames--;
 
   // Stars
   for (let star of stars) {
@@ -281,14 +310,27 @@ function draw() {
     }
   }
 
+  // Cat-mode explosion shards + shockwaves
+  for (let i = explosions.length - 1; i >= 0; i--) {
+    let e = explosions[i];
+    e.update();
+    e.display();
+    if (e.isDead()) explosions.splice(i, 1);
+  }
+
   // Hyperspace streaks while warping (behind the ship)
   drawWarpStreaks();
 
   // Ship
   ship.display();
 
+  // Cat-mode laser beam (from the cat's eyes to the locked target)
+  drawLaser();
+
   // Floating ENTER / V prompts when a link is in reach
   drawShipPrompt();
+
+  if (shaking) pop();
 
   // Mini-map of the world
   drawMinimap();
@@ -318,6 +360,15 @@ function handleInput() {
   if (gameState.warpActive) {
     updateWarp();
     return;
+  }
+
+  // Debug helper: keep firing automatically while enabled
+  if (
+    gameState.catMode &&
+    GAME_CONFIG.catMode.autoFire &&
+    gameState.laserFrames <= 0
+  ) {
+    fireCatLaser();
   }
 
   // Determine input direction from keyboard (arrows or WASD) and joystick
@@ -505,6 +556,12 @@ function collectTrash(i) {
       new ThrusterParticle(t.x, t.y, Math.cos(a) * sp, Math.sin(a) * sp)
     );
   }
+  // Collected everything: CAT CHAOS MODE!
+  if (trashCollected >= GAME_CONFIG.counts.trash && !gameState.catMode) {
+    setCatMode(true);
+    playSound("chaos");
+    gameState.screenShakeFrames = GAME_CONFIG.catMode.screenShake;
+  }
 }
 
 // ==================== WARP / AUTOPILOT ====================
@@ -687,6 +744,125 @@ function drawShipPrompt() {
   pop();
 }
 
+// ==================== CAT CHAOS MODE ====================
+// Collecting all trash transforms the ship into a cat-headed engine of
+// destruction: SPACE auto-targets the nearest on-screen object and fires.
+// C (or ?chaos=1) toggles it directly for testing.
+
+function setCatMode(on) {
+  gameState.catMode = !!on;
+  if (!gameState.catMode) {
+    gameState.laserTarget = null;
+    gameState.laserFrames = 0;
+  }
+}
+
+function toggleCatMode() {
+  setCatMode(!gameState.catMode);
+  playSound(gameState.catMode ? "select" : "deselect");
+}
+
+// Total destructible objects still standing
+function chaosRemaining() {
+  return links.length + planets.length + asteroids.length;
+}
+
+// Nearest destructible object that is currently on screen
+function getNearestOnScreenTarget() {
+  let best = null;
+  let bestDist = Infinity;
+  const consider = function (obj, kind) {
+    if (!obj || typeof obj.x !== "number") return;
+    if (obj.x < 0 || obj.x > width || obj.y < 0 || obj.y > height) return;
+    const d = dist(ship.x, ship.y, obj.x, obj.y);
+    if (d < bestDist) {
+      bestDist = d;
+      best = { obj: obj, kind: kind };
+    }
+  };
+  for (let p of planets) consider(p, "planet");
+  for (let a of asteroids) consider(a, "asteroid");
+  for (let l of links) consider(l, "link");
+  return best;
+}
+
+function createExplosion(x, y) {
+  explosions.push(new Shockwave(x, y));
+  for (let i = 0; i < GAME_CONFIG.catMode.explosionParticles; i++) {
+    explosions.push(new ExplosionShard(x, y));
+  }
+}
+
+function destroyTarget(t) {
+  if (t.kind === "link") {
+    const idx = links.indexOf(t.obj);
+    if (idx >= 0) {
+      links.splice(idx, 1);
+      navi.splice(idx, 1);
+    }
+    if (gameState.selectedLinkIndex === idx) {
+      gameState.selectedLinkIndex = null;
+    } else if (
+      gameState.selectedLinkIndex !== null &&
+      gameState.selectedLinkIndex > idx
+    ) {
+      gameState.selectedLinkIndex--;
+    }
+    if (gameState.nearestLink === t.obj) gameState.nearestLink = null;
+  } else if (t.kind === "planet") {
+    const idx = planets.indexOf(t.obj);
+    if (idx >= 0) planets.splice(idx, 1);
+  } else if (t.kind === "asteroid") {
+    const idx = asteroids.indexOf(t.obj);
+    if (idx >= 0) asteroids.splice(idx, 1);
+  }
+}
+
+function fireCatLaser() {
+  if (!gameState.catMode) return;
+  gameState.laserFrames = GAME_CONFIG.catMode.laserFrames;
+  gameState.screenShakeFrames = GAME_CONFIG.catMode.screenShake;
+  playSound("laser");
+
+  const target = getNearestOnScreenTarget();
+  if (!target) {
+    gameState.laserTarget = null;
+    return;
+  }
+
+  gameState.laserTarget = { x: target.obj.x, y: target.obj.y };
+  createExplosion(target.obj.x, target.obj.y);
+  playSound("explosion");
+  destroyTarget(target);
+}
+
+function drawLaser() {
+  const t = gameState.laserTarget;
+  if (!t || gameState.laserFrames <= 0) return;
+  const r = ship.size * GAME_CONFIG.catMode.scale;
+  const eyeY = ship.y - r * 0.06;
+  const exL = ship.x - r * 0.32;
+  const exR = ship.x + r * 0.32;
+  const a = map(
+    gameState.laserFrames,
+    0,
+    GAME_CONFIG.catMode.laserFrames,
+    0,
+    255
+  );
+  push();
+  strokeCap(ROUND);
+  stroke(255, 60, 60, a * 0.5);
+  strokeWeight(9);
+  line(exL, eyeY, t.x, t.y);
+  line(exR, eyeY, t.x, t.y);
+  stroke(255, 255, 255, a);
+  strokeWeight(3);
+  line(exL, eyeY, t.x, t.y);
+  line(exR, eyeY, t.x, t.y);
+  pop();
+}
+
 function keyPressed(e) {
   if (!gameState.appReady) return; // ignore keys until the game is ready
   // While the preview modal is open, ENTER opens the link in a new tab;
@@ -697,6 +873,15 @@ function keyPressed(e) {
     } else if (key === "Enter" || key === " ") {
       openPreviewLinkInTab();
     }
+    return;
+  }
+  // Cat Chaos: C toggles the mode (debug), SPACE fires the auto-laser
+  if (key === "c" || key === "C") {
+    if (!(e && e.repeat)) toggleCatMode();
+    return;
+  }
+  if (gameState.catMode && key === " " && !linksListOpen && !infoMenuOpen) {
+    fireCatLaser();
     return;
   }
   // Info/how-to-play toggle (I). The link list handles I in its own listener.

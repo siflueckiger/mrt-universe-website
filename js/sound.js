@@ -77,6 +77,26 @@ function playSound(name) {
         blip(990, 990, 0.12, "square", 0.7);
       }, 60);
       break;
+    case "laser":
+      blip(1800, 220, 0.12, "sawtooth", 0.9);
+      break;
+    case "explosion":
+      blip(140, 22, 0.36, "triangle", 1);
+      blip(320, 60, 0.22, "sawtooth", 0.5);
+      break;
+    case "chaos":
+      // Triumphant little fanfare when the cat awakens
+      blip(523, 523, 0.1, "square", 1);
+      setTimeout(function () {
+        blip(659, 659, 0.1, "square", 1);
+      }, 100);
+      setTimeout(function () {
+        blip(784, 784, 0.1, "square", 1);
+      }, 200);
+      setTimeout(function () {
+        blip(1047, 1047, 0.32, "square", 1);
+      }, 300);
+      break;
   }
 }
 

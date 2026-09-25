@@ -86,6 +86,17 @@ const GAME_CONFIG = {
     // pixel-art junk (floppy, can, bottle, monitor).
     items: [],
   },
+  // End-game reward: collect all trash -> cat-headed ship of destruction.
+  catMode: {
+    scale: 1.5, // relative to the UFO footprint
+    // Optional image inside assets/ (PNG/GIF); empty = procedural cat head
+    image: "",
+    laserFrames: 9,
+    screenShake: 7,
+    explosionParticles: 34,
+    shardLifespan: 45,
+    autoFire: false, // debug helper: fire continuously when on
+  },
   minimap: {
     size: 120,
     margin: 20,

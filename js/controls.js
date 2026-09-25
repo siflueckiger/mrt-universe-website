@@ -73,19 +73,46 @@ function setupMobileControls() {
   actionButton.addEventListener("touchstart", (e) => {
     e.preventDefault();
     if (!gameState.appReady) return;
+    if (gameState.catMode) {
+      fireCatLaser();
+      return;
+    }
     activateLink();
   });
 
   actionButton.addEventListener("click", (e) => {
     e.preventDefault();
     if (!gameState.appReady) return;
+    if (gameState.catMode) {
+      fireCatLaser();
+      return;
+    }
     activateLink();
   });
 
-  // Update button appearances based on link proximity
+  // Update button appearances based on link proximity / cat mode
   let lastActionable = null;
+  let lastGlyph = "⏎";
 
   function updateActionButton() {
+    // In cat mode the button is always a fire trigger
+    if (gameState.appReady && gameState.catMode) {
+      if (lastGlyph !== "🔥") {
+        lastGlyph = "🔥";
+        actionButton.textContent = "🔥";
+      }
+      if (lastActionable !== true) {
+        lastActionable = true;
+        actionButton.classList.remove("inactive");
+      }
+      return;
+    }
+
+    if (lastGlyph !== "⏎") {
+      lastGlyph = "⏎";
+      actionButton.textContent = "⏎";
+    }
+
     // Action button state — allow opening the target link if within activationDistance
     let actionable = false;
     if (gameState.appReady) {

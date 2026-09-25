@@ -54,7 +54,15 @@ class Ship {
   display() {
     push();
     translate(this.x, this.y);
+    if (gameState.catMode) {
+      this.displayCat();
+    } else {
+      this.displayUfo();
+    }
+    pop();
+  }
 
+  displayUfo() {
     // UFO Body
     fill(255, 100, 255);
     stroke(255, 150, 255);
@@ -71,8 +79,66 @@ class Ship {
     ellipse(-15, 5, 5, 5);
     ellipse(0, 5, 5, 5);
     ellipse(15, 5, 5, 5);
+  }
 
-    pop();
+  // Cat-headed avatar of destruction. Uses an optional assets/ image when
+  // configured, otherwise a procedural retro pixel-art cyber-cat.
+  displayCat() {
+    const r = this.size * GAME_CONFIG.catMode.scale; // footprint radius
+    if (catImage) {
+      imageMode(CENTER);
+      image(catImage, 0, 0, r * 2, r * 2);
+      return;
+    }
+
+    const firing = gameState.laserFrames > 0;
+    const eyeCol = firing ? color(255, 40, 40) : color(0, 255, 240);
+
+    // Ears
+    fill(45, 45, 70);
+    stroke(0, 255, 255);
+    strokeWeight(2);
+    triangle(-r * 0.62, -r * 0.3, -r * 0.82, -r * 1.0, -r * 0.12, -r * 0.5);
+    triangle(r * 0.62, -r * 0.3, r * 0.82, -r * 1.0, r * 0.12, -r * 0.5);
+    // Inner ears
+    noStroke();
+    fill(255, 80, 200, 200);
+    triangle(-r * 0.56, -r * 0.4, -r * 0.7, -r * 0.86, -r * 0.26, -r * 0.52);
+    triangle(r * 0.56, -r * 0.4, r * 0.7, -r * 0.86, r * 0.26, -r * 0.52);
+
+    // Head
+    fill(45, 45, 70);
+    stroke(0, 255, 255);
+    strokeWeight(2);
+    ellipse(0, 0, r * 1.6, r * 1.4);
+
+    // Eyes (glowing)
+    noStroke();
+    fill(eyeCol);
+    ellipse(-r * 0.32, -r * 0.06, r * 0.3, r * 0.34);
+    ellipse(r * 0.32, -r * 0.06, r * 0.3, r * 0.34);
+    fill(255);
+    ellipse(-r * 0.32, -r * 0.1, r * 0.1, r * 0.12);
+    ellipse(r * 0.32, -r * 0.1, r * 0.1, r * 0.12);
+
+    // Nose
+    fill(255, 120, 200);
+    triangle(0, r * 0.22, -r * 0.08, r * 0.34, r * 0.08, r * 0.34);
+
+    // Mouth
+    noFill();
+    stroke(0, 255, 255, 180);
+    strokeWeight(1.5);
+    arc(-r * 0.12, r * 0.4, r * 0.28, r * 0.22, 0, PI);
+    arc(r * 0.12, r * 0.4, r * 0.28, r * 0.22, 0, PI);
+
+    // Whiskers
+    stroke(0, 255, 255, 150);
+    strokeWeight(1);
+    line(-r * 0.5, r * 0.2, -r * 0.95, r * 0.1);
+    line(-r * 0.5, r * 0.32, -r * 0.95, r * 0.34);
+    line(r * 0.5, r * 0.2, r * 0.95, r * 0.1);
+    line(r * 0.5, r * 0.32, r * 0.95, r * 0.34);
   }
 }
 
@@ -448,5 +514,98 @@ class Trash {
     }
   }
 }
+
+// ==================== CAT MODE EXPLOSIONS ====================
+// Debris shards and shockwave rings spawned when the cat destroys something.
+
+let catImage = null;
+
+function loadCatImage() {
+  catImage = null;
+  const name = GAME_CONFIG.catMode.image;
+  if (!name) return;
+  loadImage(
+    "assets/" + name,
+    function (img) {
+      catImage = img;
+    },
+    function () {
+      // No image: procedural cat head is used
+    }
+  );
+}
+
+class ExplosionShard {
+  constructor(x, y, color) {
+    this.x = x;
+    this.y = y;
+    const a = random(TWO_PI);
+    const sp = random(2, 7.5);
+    this.vx = Math.cos(a) * sp;
+    this.vy = Math.sin(a) * sp;
+    this.maxLife = GAME_CONFIG.catMode.shardLifespan;
+    this.life = this.maxLife;
+    this.size = random(3, 8);
+    this.rot = random(TWO_PI);
+    this.rotSpeed = random(-0.35, 0.35);
+    this.drag = 0.96;
+    this.color = color || [random(120, 255), random(60, 160), random(0, 120)];
+  }
+
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vx *= this.drag;
+    this.vy *= this.drag;
+    this.rot += this.rotSpeed;
+    this.life--;
+  }
+
+  isDead() {
+    return this.life <= 0;
+  }
+
+  display() {
+    push();
+    translate(this.x, this.y);
+    rotate(this.rot);
+    const a = map(this.life, 0, this.maxLife, 0, 255);
+    noStroke();
+    fill(this.color[0], this.color[1], this.color[2], a);
+    rect(0, 0, this.size, this.size);
+    pop();
+  }
+}
+
+class Shockwave {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.r = 4;
+    this.maxR = random(60, 120);
+    this.life = 1;
+  }
+
+  update() {
+    this.r += (this.maxR - this.r) * 0.18;
+    this.life -= 0.045;
+  }
+
+  isDead() {
+    return this.life <= 0;
+  }
+
+  display() {
+    push();
+    noFill();
+    strokeWeight(3 * this.life + 1);
+    stroke(120, 220, 255, 200 * this.life);
+    ellipse(this.x, this.y, this.r * 2);
+    stroke(255, 180, 80, 150 * this.life);
+    ellipse(this.x, this.y, this.r * 1.5);
+    pop();
+  }
+}
+
 
 
