@@ -128,24 +128,41 @@ let lastHudHtml = null;
 function updateHUD() {
   let hudElement = document.getElementById("nearest-link");
 
-  // Prioritize selected link over nearest link
-  let displayLink = getTargetLink();
+  if (gameState.catMode) {
+    const remaining = chaosRemaining();
+    let chaosHtml =
+      '<div style="color: #ff5555; font-weight: bold; font-size: 15px;">🔥 CAT CHAOS ENGAGED</div>' +
+      '<div style="color: #888; font-size: 11px; margin-top: 4px;">SPACE = fire · C = toggle (debug)</div>' +
+      '<div class="distance">Targets remaining: ' +
+      remaining +
+      "</div>";
+    if (remaining === 0) {
+      chaosHtml +=
+        '<div style="color: #00ffff; margin-top: 10px;">Nothing remains. Only the cat.</div>';
+    }
+    if (chaosHtml !== lastHudHtml) {
+      hudElement.innerHTML = chaosHtml;
+      lastHudHtml = chaosHtml;
+    }
+  } else {
+    // Prioritize selected link over nearest link
+    let displayLink = getTargetLink();
 
-  if (displayLink) {
-    let isSelected =
-      gameState.selectedLinkIndex !== null &&
-      displayLink === links[gameState.selectedLinkIndex];
-    let linkDistance = displayLink.getDistance(ship.x, ship.y);
+    if (displayLink) {
+      let isSelected =
+        gameState.selectedLinkIndex !== null &&
+        displayLink === links[gameState.selectedLinkIndex];
+      let linkDistance = displayLink.getDistance(ship.x, ship.y);
 
-    let html = `
+      let html = `
           <div class="link-info">
             <strong style="color: ${isSelected ? "#00ff00" : "#00ffff"}">${escapeHtml(
-      displayLink.data.title
-    )}${
-      isVisited(displayLink)
-        ? ' <span style="color: #00ff00">✓</span>'
-        : ""
-    }</strong>${isSelected ? " (SELECTED)" : ""}<br>
+        displayLink.data.title
+      )}${
+        isVisited(displayLink)
+          ? ' <span style="color: #00ff00">✓</span>'
+          : ""
+      }</strong>${isSelected ? " (SELECTED)" : ""}<br>
             ${escapeHtml(displayLink.data.description || "")}<br>
             <span style="color: #ffaa00;">${escapeHtml(displayLink.data.category)}</span>
           </div>
@@ -163,14 +180,15 @@ function updateHUD() {
               : ""
           }
         `;
-    if (html !== lastHudHtml) {
-      hudElement.innerHTML = html;
-      lastHudHtml = html;
-    }
-  } else {
-    if (lastHudHtml !== "Explore the space...") {
-      hudElement.innerHTML = `Explore the space...`;
-      lastHudHtml = "Explore the space...";
+      if (html !== lastHudHtml) {
+        hudElement.innerHTML = html;
+        lastHudHtml = html;
+      }
+    } else {
+      if (lastHudHtml !== "Explore the space...") {
+        hudElement.innerHTML = `Explore the space...`;
+        lastHudHtml = "Explore the space...";
+      }
     }
   }
 
@@ -180,7 +198,10 @@ function updateHUD() {
   const trashEl = document.getElementById("trash-count");
   if (trashEl) {
     const total = trashCollected + trash.length;
-    const txt = "Trash: " + trashCollected + " / " + total;
+    const txt =
+      trashCollected >= GAME_CONFIG.counts.trash && trash.length === 0
+        ? "Trash: " + trashCollected + " / " + total + " ✓"
+        : "Trash: " + trashCollected + " / " + total;
     if (trashEl.textContent !== txt) trashEl.textContent = txt;
   }
 }
