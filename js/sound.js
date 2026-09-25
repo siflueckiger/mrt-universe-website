@@ -62,6 +62,15 @@ function playSound(name) {
         blip(784, 784, 0.14, "square", 1);
       }, 80);
       break;
+    case "warp":
+      blip(180, 1400, 0.5, "sawtooth", 0.7);
+      setTimeout(function () {
+        blip(900, 1400, 0.2, "square", 0.5);
+      }, 260);
+      break;
+    case "warpEnd":
+      blip(900, 200, 0.28, "square", 0.6);
+      break;
   }
 }
 

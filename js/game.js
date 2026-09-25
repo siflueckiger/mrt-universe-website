@@ -8,6 +8,8 @@ const gameState = {
   selectedLinkIndex: null,
   // current extra acceleration multiplier (0..maxAccMultiplier)
   accelerationFactor: 0,
+  // autopilot hyperdrive toward the pinned link (J)
+  warpActive: false,
 };
 
 // ==================== GLOBALS ====================
@@ -17,6 +19,15 @@ let ship;
 let links = [];
 let navi = [];
 let planets = [];
+let nebulae = [];
+let asteroids = [];
+let particles = [];
+
+// Screen-space hyperspace streaks shown while warping
+let warpStreaks = [];
+
+// Debounce for the J toggle so OS key-repeat doesn't flicker the warp
+let lastWarpToggle = 0;
 
 // Titles of links the player has opened (session-only, resets on reload)
 let visited = new Set();
@@ -81,6 +92,20 @@ function setup() {
     planets.push(new Planet(x, y));
   }
 
+  // Nebulae (background space clouds)
+  for (let i = 0; i < GAME_CONFIG.counts.nebulae; i++) {
+    let x = random(GAME_CONFIG.worldBounds.minX, width + GAME_CONFIG.worldBounds.maxX);
+    let y = random(GAME_CONFIG.worldBounds.minY, height + GAME_CONFIG.worldBounds.maxY);
+    nebulae.push(new Nebula(x, y));
+  }
+
+  // Asteroids (space rocks)
+  for (let i = 0; i < GAME_CONFIG.counts.asteroids; i++) {
+    let x = random(GAME_CONFIG.worldBounds.minX, width + GAME_CONFIG.worldBounds.maxX);
+    let y = random(GAME_CONFIG.worldBounds.minY, height + GAME_CONFIG.worldBounds.maxY);
+    asteroids.push(new Asteroid(x, y));
+  }
+
   // Mobile controls
   setupMobileControls();
 }
@@ -94,6 +119,20 @@ function draw() {
   for (let star of stars) {
     star.display();
     star.checkBorder();
+  }
+
+  // Nebulae (rendered behind celestial bodies)
+  for (let nebula of nebulae) {
+    nebula.update();
+    nebula.display();
+  }
+  // Guard against any blend-mode leakage from the nebula pass
+  blendMode(BLEND);
+
+  // Asteroids
+  for (let asteroid of asteroids) {
+    asteroid.update();
+    asteroid.display();
   }
 
   // Planets
@@ -191,6 +230,19 @@ function draw() {
     line(ship.x, ship.y, selectedLink.x, selectedLink.y);
   }
 
+  // Update & display thruster particles (behind the ship)
+  for (let i = particles.length - 1; i >= 0; i--) {
+    let p = particles[i];
+    p.update();
+    p.display();
+    if (p.isDead()) {
+      particles.splice(i, 1);
+    }
+  }
+
+  // Hyperspace streaks while warping (behind the ship)
+  drawWarpStreaks();
+
   // Ship
   ship.display();
 
@@ -217,6 +269,13 @@ function handleInput() {
     setFlying(false);
     return;
   }
+
+  // Autopilot hyperdrive takes over all movement while active
+  if (gameState.warpActive) {
+    updateWarp();
+    return;
+  }
+
   // Determine input direction from keyboard (arrows or WASD) and joystick
   let inputX = 0;
   let inputY = 0;
@@ -313,17 +372,23 @@ function handleInput() {
       GAME_CONFIG.movement.baseSpeed * (1 + gameState.accelerationFactor);
 
     // Keyboard movement (arrows or WASD; preserve original sign convention)
+    let movedX = 0;
+    let movedY = 0;
     if (keyIsDown(LEFT_ARROW) || keyIsDown(65)) {
       moveObjects("x", moveSpeed);
+      movedX += 1;
     }
     if (keyIsDown(RIGHT_ARROW) || keyIsDown(68)) {
       moveObjects("x", -moveSpeed);
+      movedX -= 1;
     }
     if (keyIsDown(UP_ARROW) || keyIsDown(87)) {
       moveObjects("y", moveSpeed);
+      movedY += 1;
     }
     if (keyIsDown(DOWN_ARROW) || keyIsDown(83)) {
       moveObjects("y", -moveSpeed);
+      movedY -= 1;
     }
 
     // Joystick controls (scaled and affected by acceleration)
@@ -331,11 +396,28 @@ function handleInput() {
       let speedMultiplier =
         GAME_CONFIG.joystick.speedScale * (1 + gameState.accelerationFactor);
       if (Math.abs(joystick.deltaX) > GAME_CONFIG.joystick.deadzone) {
-        moveObjects("x", -joystick.deltaX * speedMultiplier);
+        let amt = -joystick.deltaX * speedMultiplier;
+        moveObjects("x", amt);
+        movedX += amt > 0 ? 1 : -1;
       }
       if (Math.abs(joystick.deltaY) > GAME_CONFIG.joystick.deadzone) {
-        moveObjects("y", -joystick.deltaY * speedMultiplier);
+        let amt = -joystick.deltaY * speedMultiplier;
+        moveObjects("y", amt);
+        movedY += amt > 0 ? 1 : -1;
       }
+    }
+
+    // Spawn thruster particles opposite of movement direction
+    if ((movedX !== 0 || movedY !== 0) && particles.length < GAME_CONFIG.particles.maxCount) {
+      let angle = Math.atan2(movedY, movedX);
+      // Particle shoots opposite the world movement vector
+      let pSpeed = random(1.5, 3.5);
+      let pvx = Math.cos(angle) * pSpeed;
+      let pvy = Math.sin(angle) * pSpeed;
+      // UFO underside emitter position
+      let emitX = ship.x + random(-8, 8);
+      let emitY = ship.y + 10 + random(-2, 4);
+      particles.push(new ThrusterParticle(emitX, emitY, pvx, pvy));
     }
   }
 
@@ -353,9 +435,126 @@ function moveObjects(axis, speed) {
   for (let planet of planets) {
     planet[axis] += planet.speed * speed;
   }
+  for (let nebula of nebulae) {
+    nebula[axis] += nebula.speed * speed;
+  }
+  for (let asteroid of asteroids) {
+    asteroid[axis] += asteroid.speed * speed;
+  }
 }
 
-function keyPressed() {
+// ==================== WARP / AUTOPILOT ====================
+// J engages a hyperdrive toward the pinned link. Any key cancels it.
+// While active the world streams past the centered ship and a set of
+// screen-space streaks sells the speed.
+
+function initWarpStreaks() {
+  warpStreaks = [];
+  for (let i = 0; i < GAME_CONFIG.warp.streaks; i++) {
+    warpStreaks.push({
+      angle: random(TWO_PI),
+      radius: random(40, 800),
+      length: random(60, 240),
+      speed: random(GAME_CONFIG.warp.streakSpeedMin, GAME_CONFIG.warp.streakSpeedMax),
+      alpha: random(50, 170),
+    });
+  }
+}
+
+function startWarp() {
+  if (gameState.warpActive) return;
+  // Prefer the pinned link; fall back to the nearest one so J always works
+  if (gameState.selectedLinkIndex === null) {
+    if (!gameState.nearestLink) return;
+    gameState.selectedLinkIndex = links.indexOf(gameState.nearestLink);
+  }
+  gameState.warpActive = true;
+  gameState.accelerationFactor = 0;
+  initWarpStreaks();
+  playSound("warp");
+}
+
+function endWarp(silent) {
+  if (!gameState.warpActive) return;
+  gameState.warpActive = false;
+  gameState.accelerationFactor = 0;
+  warpStreaks = [];
+  if (!silent) playSound("warpEnd");
+}
+
+function updateWarp() {
+  if (
+    gameState.selectedLinkIndex === null ||
+    gameState.selectedLinkIndex >= links.length
+  ) {
+    endWarp();
+    return;
+  }
+
+  const target = links[gameState.selectedLinkIndex];
+  const dx = target.x - ship.x;
+  const dy = target.y - ship.y;
+  const d = Math.sqrt(dx * dx + dy * dy);
+
+  if (d <= GAME_CONFIG.activationDistance) {
+    endWarp();
+    playSound("reach");
+    return;
+  }
+
+  const nx = dx / d;
+  const ny = dy / d;
+  const speed =
+    GAME_CONFIG.movement.baseSpeed * GAME_CONFIG.warp.speedMultiplier;
+
+  // Move the world opposite the target vector so the link streams toward
+  // the centered ship.
+  moveObjects("x", -nx * speed);
+  moveObjects("y", -ny * speed);
+
+  // Exhaust kicked out the back while warping (opposite the travel direction)
+  for (let i = 0; i < GAME_CONFIG.warp.emissiveParticles; i++) {
+    if (particles.length >= GAME_CONFIG.particles.maxCount) break;
+    let pSpeed = random(3, 7);
+    particles.push(
+      new ThrusterParticle(
+        ship.x + random(-10, 10),
+        ship.y + 10 + random(-4, 6),
+        -nx * pSpeed,
+        -ny * pSpeed
+      )
+    );
+  }
+
+  // Advance the hyperspace streaks outward
+  for (let s of warpStreaks) {
+    s.radius += s.speed;
+    if (s.radius > 900) {
+      s.radius = random(30, 120);
+      s.angle = random(TWO_PI);
+      s.length = random(60, 240);
+    }
+  }
+
+  setFlying(true);
+}
+
+function drawWarpStreaks() {
+  if (!gameState.warpActive) return;
+  push();
+  strokeWeight(1.5);
+  for (let s of warpStreaks) {
+    let x1 = ship.x + cos(s.angle) * s.radius;
+    let y1 = ship.y + sin(s.angle) * s.radius;
+    let x2 = ship.x + cos(s.angle) * (s.radius + s.length);
+    let y2 = ship.y + sin(s.angle) * (s.radius + s.length);
+    stroke(150, 220, 255, s.alpha);
+    line(x1, y1, x2, y2);
+  }
+  pop();
+}
+
+function keyPressed(e) {
   if (!gameState.appReady) return; // ignore keys until the game is ready
   // Info/how-to-play toggle (I). The link list handles I in its own listener.
   if (!linksListOpen && (key === "i" || key === "I")) {
@@ -375,6 +574,24 @@ function keyPressed() {
   }
   // Ignore other keys while the link list is open (ESC is handled in ui.js)
   if (linksListOpen) return;
+  // J toggles the autopilot warp (ignore auto-repeat while held)
+  if (key === "j" || key === "J") {
+    if (e && e.repeat) return;
+    const now = Date.now();
+    if (now - lastWarpToggle < 300) return;
+    lastWarpToggle = now;
+    if (gameState.warpActive) {
+      endWarp();
+    } else {
+      startWarp();
+    }
+    return;
+  }
+  // Any other key cancels an active warp (ignore auto-repeat)
+  if (gameState.warpActive) {
+    if (!(e && e.repeat)) endWarp();
+    return;
+  }
   // Open link on ENTER or SPACE
   if ((key === "Enter" || key === " ") && gameState.nearestLink) {
     tryOpenLink(gameState.nearestLink);
@@ -542,6 +759,7 @@ function bootGame() {
   }
   initInfoMenu();
   initLinksList();
+  initWarpButton();
   initSoundButton();
 }
 bootGame();

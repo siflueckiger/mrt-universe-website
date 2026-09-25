@@ -6,6 +6,7 @@ let infoMenuOpen = false;
 
 function openInfoMenu() {
   if (infoMenuOpen) return;
+  if (typeof endWarp === "function" && gameState.warpActive) endWarp(true);
   const menu = document.getElementById("start-menu");
   if (!menu) return;
   infoMenuOpen = true;
@@ -55,6 +56,48 @@ function initInfoMenu() {
     if (e.target === menu) closeInfoMenu();
   });
   if (hudBtn) hudBtn.addEventListener("click", toggleInfoMenu);
+}
+
+// ==================== WARP BUTTON ====================
+// HUD button mirror of the J key (also usable on touch devices).
+
+function updateWarpButton() {
+  const btn = document.getElementById("warp-button");
+  if (!btn) return;
+  const hasTarget =
+    gameState.selectedLinkIndex !== null &&
+    gameState.selectedLinkIndex < links.length;
+  btn.classList.toggle("warping", gameState.warpActive);
+  btn.classList.toggle("disabled", !hasTarget && !gameState.warpActive);
+  btn.textContent = gameState.warpActive ? "Warp (J): ON" : "Warp (J)";
+}
+
+function initWarpButton() {
+  const btn = document.getElementById("warp-button");
+  if (!btn) return;
+  let lastToggle = 0;
+  function onToggle(e) {
+    if (e && e.cancelable) e.preventDefault();
+    const now = Date.now();
+    if (now - lastToggle < 350) return; // swallow synthetic click after touch/pointer
+    lastToggle = now;
+    initAudio();
+    if (gameState.warpActive) {
+      endWarp();
+    } else {
+      startWarp();
+    }
+    btn.blur();
+  }
+  btn.addEventListener("click", onToggle);
+  btn.addEventListener("pointerdown", onToggle);
+  btn.addEventListener(
+    "touchstart",
+    function (e) {
+      onToggle(e);
+    },
+    { passive: false }
+  );
 }
 
 // ==================== HUD UPDATE ====================
@@ -111,8 +154,12 @@ function updateHUD() {
             visited.size
           } / ${links.length}</div>
           ${
-            linkDistance < GAME_CONFIG.activationDistance
+            gameState.warpActive
+              ? '<div style="color: #00ffff; margin-top: 10px;">🛸 WARP ENGAGED — any key to cancel</div>'
+              : linkDistance < GAME_CONFIG.activationDistance
               ? '<div style="color: #888; margin-top: 10px;">⏎ ENTER to open</div>'
+              : gameState.selectedLinkIndex !== null
+              ? '<div style="color: #888; margin-top: 10px;">J warp · ⏎ open when close</div>'
               : ""
           }
         `;
@@ -126,6 +173,8 @@ function updateHUD() {
       lastHudHtml = "Explore the space...";
     }
   }
+
+  updateWarpButton();
 }
 
 // ==================== LINK LIST ====================
@@ -270,6 +319,7 @@ function buildLinksList() {
 
 function openLinksList() {
   if (!gameState.appReady) return;
+  if (typeof endWarp === "function" && gameState.warpActive) endWarp(true);
   const overlay = document.getElementById("links-list");
   if (!overlay || linksListOpen) return;
   linksListOpen = true;
