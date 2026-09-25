@@ -52,6 +52,10 @@
             links when you're close to one.
           </li>
           <li>
+            <strong>V</strong> previews a YouTube link inside the CRT screen
+            when you're close to one.
+          </li>
+          <li>
             <strong>L</strong> or the <strong>LINKS BUTTON</strong> opens the
             link list to pin any destination.
           </li>
@@ -84,7 +88,7 @@
     <div id="controls">
       ← → ↑ ↓ / WASD Move<br />
       <span style="color: #00ffff">ENTER/SPACE</span> = Open link<br />
-      <span style="color: #00ffff">J</span> = Warp to pinned link
+      <span style="color: #00ffff">V</span> = Preview video · <span style="color: #00ffff">J</span> = Warp
     </div>
 
     <div id="mobile-controls">
@@ -94,6 +98,25 @@
         </div>
       </div>
       <div id="action-button" class="inactive" role="button" aria-label="Open link">⏎</div>
+    </div>
+
+    <!-- In-game YouTube preview modal (V key near a link) -->
+    <div id="preview-modal" role="dialog" aria-modal="true" aria-label="Video preview">
+      <div class="preview-window">
+        <div class="preview-titlebar">
+          <span id="preview-title">Preview</span>
+          <button id="preview-close" type="button" aria-label="Close preview">✕</button>
+        </div>
+        <div class="preview-body">
+          <iframe
+            id="preview-frame"
+            title="Video preview"
+            allow="autoplay; encrypted-media; picture-in-picture"
+            allowfullscreen
+          ></iframe>
+          <div id="preview-fallback" class="preview-fallback"></div>
+        </div>
+      </div>
     </div>
 
     <!-- CRT/scanline overlay, pure visual (toggled via GAME_CONFIG.visual) -->

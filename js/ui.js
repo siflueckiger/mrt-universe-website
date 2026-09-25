@@ -136,6 +136,7 @@ function updateHUD() {
       gameState.selectedLinkIndex !== null &&
       displayLink === links[gameState.selectedLinkIndex];
     let linkDistance = displayLink.getDistance(ship.x, ship.y);
+    let canPreview = !!getYouTubeId(displayLink.data.url);
 
     let html = `
           <div class="link-info">
@@ -157,7 +158,9 @@ function updateHUD() {
             gameState.warpActive
               ? '<div style="color: #00ffff; margin-top: 10px;">🛸 WARP ENGAGED — any key to cancel</div>'
               : linkDistance < GAME_CONFIG.activationDistance
-              ? '<div style="color: #888; margin-top: 10px;">⏎ ENTER to open</div>'
+              ? `<div style="color: #888; margin-top: 10px;">⏎ ENTER open${
+                  canPreview ? " · V preview" : ""
+                }</div>`
               : gameState.selectedLinkIndex !== null
               ? '<div style="color: #888; margin-top: 10px;">J warp · ⏎ open when close</div>'
               : ""
@@ -175,6 +178,95 @@ function updateHUD() {
   }
 
   updateWarpButton();
+}
+
+// ==================== VIDEO PREVIEW MODAL ====================
+// V near a link embeds a YouTube player right inside the CRT screen.
+// Non-embeddable links (e.g. Flickr) fall back to an "open in new tab"
+// button. Closing clears the iframe src so playback/audio stops.
+
+let previewOpen = false;
+
+// Extract a YouTube video id from watch / youtu.be / embed / shorts URLs
+function getYouTubeId(url) {
+  if (!url) return null;
+  const patterns = [
+    /(?:youtube\.com\/watch\?[^#]*\bv=)([\w-]{11})/,
+    /(?:youtu\.be\/)([\w-]{11})/,
+    /(?:youtube\.com\/embed\/)([\w-]{11})/,
+    /(?:youtube\.com\/shorts\/)([\w-]{11})/,
+  ];
+  for (let re of patterns) {
+    const m = String(url).match(re);
+    if (m) return m[1];
+  }
+  return null;
+}
+
+function openPreview(link) {
+  if (!link || previewOpen) return;
+  const overlay = document.getElementById("preview-modal");
+  const frame = document.getElementById("preview-frame");
+  const title = document.getElementById("preview-title");
+  const fallback = document.getElementById("preview-fallback");
+  if (!overlay || !frame || !fallback) return;
+
+  // Never preview mid-warp
+  if (typeof endWarp === "function" && gameState.warpActive) endWarp(true);
+
+  previewOpen = true;
+  if (title) title.textContent = link.data.title || "Preview";
+
+  const videoId = getYouTubeId(link.data.url);
+  if (videoId) {
+    frame.style.display = "block";
+    fallback.style.display = "none";
+    frame.src =
+      "https://www.youtube-nocookie.com/embed/" +
+      videoId +
+      "?autoplay=1&rel=0";
+  } else {
+    // Can't embed — offer a new-tab fallback instead of a blank frame
+    frame.removeAttribute("src");
+    frame.style.display = "none";
+    fallback.style.display = "flex";
+    fallback.innerHTML =
+      '<div>This link can\'t be previewed in-game.</div>' +
+      '<button type="button" class="preview-open-tab" id="preview-open-tab">Open in new tab</button>';
+    const openTab = document.getElementById("preview-open-tab");
+    if (openTab) {
+      openTab.addEventListener("click", function () {
+        window.open(link.data.url, "_blank", "noopener");
+      });
+    }
+  }
+
+  overlay.style.display = "flex";
+  document.body.classList.add("preview-open");
+  playSound("select");
+}
+
+function closePreview() {
+  if (!previewOpen) return;
+  const overlay = document.getElementById("preview-modal");
+  const frame = document.getElementById("preview-frame");
+  previewOpen = false;
+  // Clearing src tears down the player so audio stops immediately
+  if (frame) frame.removeAttribute("src");
+  if (overlay) overlay.style.display = "none";
+  document.body.classList.remove("preview-open");
+  playSound("deselect");
+}
+
+function initPreviewModal() {
+  const overlay = document.getElementById("preview-modal");
+  const closeBtn = document.getElementById("preview-close");
+  if (!overlay) return;
+  if (closeBtn) closeBtn.addEventListener("click", closePreview);
+  // Click on the dimmed backdrop closes the modal
+  overlay.addEventListener("click", function (e) {
+    if (e.target === overlay) closePreview();
+  });
 }
 
 // ==================== LINK LIST ====================
