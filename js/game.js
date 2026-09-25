@@ -287,6 +287,9 @@ function draw() {
   // Ship
   ship.display();
 
+  // Floating ENTER / V prompts when a link is in reach
+  drawShipPrompt();
+
   // Mini-map of the world
   drawMinimap();
 
@@ -615,11 +618,85 @@ function drawWarpStreaks() {
   pop();
 }
 
+// ==================== SHIP ACTION PROMPT ====================
+// Floating "[ENTER] Open · [V] Preview" pill next to the UFO whenever the
+// nearest link is within activationDistance. Hidden during overlays/warp.
+
+function drawShipPrompt() {
+  if (
+    !gameState.appReady ||
+    previewOpen ||
+    linksListOpen ||
+    infoMenuOpen ||
+    gameState.warpActive
+  ) {
+    return;
+  }
+  const link = gameState.nearestLink;
+  if (!link) return;
+  if (link.getDistance(ship.x, ship.y) > GAME_CONFIG.activationDistance) return;
+
+  const cfg = GAME_CONFIG.prompt;
+  const canPreview = !!getYouTubeId(link.data.url);
+  const segments = canPreview
+    ? [
+        ["[ENTER]", [0, 255, 0]],
+        [" Open", [230, 240, 250]],
+        ["  ", [0, 0, 0]],
+        ["[V]", [0, 255, 0]],
+        [" Preview", [230, 240, 250]],
+      ]
+    : [
+        ["[ENTER]", [0, 255, 0]],
+        [" Open", [230, 240, 250]],
+      ];
+
+  push();
+  textFont("Courier New");
+  textSize(cfg.fontSize);
+  textAlign(LEFT, CENTER);
+
+  let totalW = 0;
+  for (let s of segments) totalW += textWidth(s[0]);
+  const w = totalW + cfg.paddingX * 2;
+  const h = cfg.fontSize + cfg.paddingY * 2;
+  const py =
+    ship.y -
+    cfg.offsetY +
+    sin(frameCount * 0.08) * cfg.bobAmplitude;
+
+  // Retro pill background + neon border
+  rectMode(CENTER);
+  noStroke();
+  fill(0, 0, 0, 185);
+  rect(ship.x, py, w, h, 6);
+  stroke(0, 255, 255, 200);
+  strokeWeight(1);
+  noFill();
+  rect(ship.x, py, w, h, 6);
+
+  // Two-tone label: keys in green, actions in near-white
+  noStroke();
+  let cursor = ship.x - totalW / 2;
+  for (let s of segments) {
+    const col = s[1];
+    fill(col[0], col[1], col[2]);
+    text(s[0], cursor, py);
+    cursor += textWidth(s[0]);
+  }
+  pop();
+}
+
 function keyPressed(e) {
   if (!gameState.appReady) return; // ignore keys until the game is ready
-  // While the preview modal is open, ESC or V closes it; all else ignored
+  // While the preview modal is open, ENTER opens the link in a new tab;
+  // ESC or V closes it. All other keys ignored.
   if (previewOpen) {
-    if (key === "Escape" || key === "v" || key === "V") closePreview();
+    if (key === "Escape" || key === "v" || key === "V") {
+      closePreview();
+    } else if (key === "Enter" || key === " ") {
+      openPreviewLinkInTab();
+    }
     return;
   }
   // Info/how-to-play toggle (I). The link list handles I in its own listener.

@@ -136,7 +136,6 @@ function updateHUD() {
       gameState.selectedLinkIndex !== null &&
       displayLink === links[gameState.selectedLinkIndex];
     let linkDistance = displayLink.getDistance(ship.x, ship.y);
-    let canPreview = !!getYouTubeId(displayLink.data.url);
 
     let html = `
           <div class="link-info">
@@ -158,9 +157,7 @@ function updateHUD() {
             gameState.warpActive
               ? '<div style="color: #00ffff; margin-top: 10px;">🛸 WARP ENGAGED — any key to cancel</div>'
               : linkDistance < GAME_CONFIG.activationDistance
-              ? `<div style="color: #888; margin-top: 10px;">⏎ ENTER open${
-                  canPreview ? " · V preview" : ""
-                }</div>`
+              ? ""
               : gameState.selectedLinkIndex !== null
               ? '<div style="color: #888; margin-top: 10px;">J warp · ⏎ open when close</div>'
               : ""
@@ -194,6 +191,8 @@ function updateHUD() {
 // button. Closing clears the iframe src so playback/audio stops.
 
 let previewOpen = false;
+// Link currently shown in the modal (so ENTER/the fallback button can open it)
+let previewLink = null;
 
 // Extract a YouTube video id from watch / youtu.be / embed / shorts URLs
 function getYouTubeId(url) {
@@ -223,6 +222,7 @@ function openPreview(link) {
   if (typeof endWarp === "function" && gameState.warpActive) endWarp(true);
 
   previewOpen = true;
+  previewLink = link;
   if (title) title.textContent = link.data.title || "Preview";
 
   const videoId = getYouTubeId(link.data.url);
@@ -239,13 +239,11 @@ function openPreview(link) {
     frame.style.display = "none";
     fallback.style.display = "flex";
     fallback.innerHTML =
-      '<div>This link can\'t be previewed in-game.</div>' +
+      '<div>This link can\'t be previewed in-game.<br>Press ENTER to open it in a new tab.</div>' +
       '<button type="button" class="preview-open-tab" id="preview-open-tab">Open in new tab</button>';
     const openTab = document.getElementById("preview-open-tab");
     if (openTab) {
-      openTab.addEventListener("click", function () {
-        window.open(link.data.url, "_blank", "noopener");
-      });
+      openTab.addEventListener("click", openPreviewLinkInTab);
     }
   }
 
@@ -254,11 +252,19 @@ function openPreview(link) {
   playSound("select");
 }
 
+// Open the previewed link in a browser tab, then close the modal
+function openPreviewLinkInTab() {
+  if (!previewLink) return;
+  window.open(previewLink.data.url, "_blank", "noopener");
+  closePreview();
+}
+
 function closePreview() {
   if (!previewOpen) return;
   const overlay = document.getElementById("preview-modal");
   const frame = document.getElementById("preview-frame");
   previewOpen = false;
+  previewLink = null;
   // Clearing src tears down the player so audio stops immediately
   if (frame) frame.removeAttribute("src");
   if (overlay) overlay.style.display = "none";
