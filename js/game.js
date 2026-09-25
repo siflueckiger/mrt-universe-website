@@ -265,7 +265,7 @@ function draw() {
 
 function handleInput() {
   // Ignore input until app is ready or while an overlay is open
-  if (!gameState.appReady || linksListOpen || infoMenuOpen) {
+  if (!gameState.appReady || linksListOpen || infoMenuOpen || previewOpen) {
     setFlying(false);
     return;
   }
@@ -556,6 +556,11 @@ function drawWarpStreaks() {
 
 function keyPressed(e) {
   if (!gameState.appReady) return; // ignore keys until the game is ready
+  // While the preview modal is open, ESC or V closes it; all else ignored
+  if (previewOpen) {
+    if (key === "Escape" || key === "v" || key === "V") closePreview();
+    return;
+  }
   // Info/how-to-play toggle (I). The link list handles I in its own listener.
   if (!linksListOpen && (key === "i" || key === "I")) {
     toggleInfoMenu();
@@ -590,6 +595,17 @@ function keyPressed(e) {
   // Any other key cancels an active warp (ignore auto-repeat)
   if (gameState.warpActive) {
     if (!(e && e.repeat)) endWarp();
+    return;
+  }
+  // V previews the target link in the CRT modal when close enough
+  if (key === "v" || key === "V") {
+    let target = getTargetLink();
+    if (
+      target &&
+      target.getDistance(ship.x, ship.y) < GAME_CONFIG.activationDistance
+    ) {
+      openPreview(target);
+    }
     return;
   }
   // Open link on ENTER or SPACE
@@ -760,6 +776,7 @@ function bootGame() {
   initInfoMenu();
   initLinksList();
   initWarpButton();
+  initPreviewModal();
   initSoundButton();
 }
 bootGame();
