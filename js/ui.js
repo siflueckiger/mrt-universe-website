@@ -178,6 +178,14 @@ function updateHUD() {
   }
 
   updateWarpButton();
+
+  // Trash progress is always visible, even with no link in range
+  const trashEl = document.getElementById("trash-count");
+  if (trashEl) {
+    const total = trashCollected + trash.length;
+    const txt = "Trash: " + trashCollected + " / " + total;
+    if (trashEl.textContent !== txt) trashEl.textContent = txt;
+  }
 }
 
 // ==================== VIDEO PREVIEW MODAL ====================

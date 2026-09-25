@@ -27,6 +27,11 @@ body {
 #hud .distance {
   color: #ffaa00;
 }
+#hud #trash-count {
+  color: #ffcc00;
+  font-size: 12px;
+  margin-top: 6px;
+}
 #hud .action {
   color: #00ffff;
   margin-top: 10px;
