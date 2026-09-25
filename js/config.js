@@ -104,6 +104,14 @@ const GAME_CONFIG = {
   visual: {
     crtOverlay: true,
   },
+  // Floating action prompts drawn next to the UFO when a link is in range
+  prompt: {
+    offsetY: 46,
+    fontSize: 13,
+    paddingX: 10,
+    paddingY: 6,
+    bobAmplitude: 3,
+  },
   // Must stay in sync with the @media (max-width: 768px) rule in css/style.css
   mobileBreakpoint: 768,
 };
