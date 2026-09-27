@@ -131,6 +131,13 @@ function playSound(name) {
         blip(900, 200, 0.14, "square", 0.6);
       }, 60);
       break;
+    case "void":
+      // Hollow descending tone as the last object dies
+      blip(220, 55, 1.2, "triangle", 0.9);
+      setTimeout(function () {
+        blip(110, 40, 1.4, "sawtooth", 0.5);
+      }, 180);
+      break;
   }
 }
 
@@ -211,6 +218,10 @@ function setChaosDrone(level) {
     return;
   }
   const l = constrain(level || 0, 0, 1);
+  if (l <= 0.001) {
+    stopChaosDrone();
+    return;
+  }
   if (Math.abs(l - lastChaosLevel) < 0.03) return;
   lastChaosLevel = l;
   if (!chaosDrone) startChaosDrone();

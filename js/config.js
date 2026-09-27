@@ -115,6 +115,8 @@ const GAME_CONFIG = {
     // Red glimmer overlay intensity at 0% and 100% destruction progress
     overlayIntensityMin: 0.22,
     overlayIntensityMax: 0.72,
+    // Dimmed overlay once only the cat remains
+    overlayVoidIntensity: 0.14,
     // Endless ambient screen shake (pixels) at 100% destruction progress
     ambientShakeMax: 3.5,
   },

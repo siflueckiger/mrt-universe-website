@@ -139,8 +139,12 @@ function updateChaosOverlay() {
   if (!active) return;
   const min = GAME_CONFIG.catMode.overlayIntensityMin;
   const max = GAME_CONFIG.catMode.overlayIntensityMax;
+  // Once only the cat remains the red dims to a brooding glow
+  const base = gameState.voidReached
+    ? GAME_CONFIG.catMode.overlayVoidIntensity
+    : min + (max - min) * chaosProgress();
   // Round so we only touch the DOM when the level visibly changes
-  const level = Math.round((min + (max - min) * chaosProgress()) * 1000) / 1000;
+  const level = Math.round(base * 1000) / 1000;
   if (level !== chaosOverlayLevel) {
     chaosOverlayLevel = level;
     document.body.style.setProperty("--chaos-level", level);
@@ -163,7 +167,8 @@ function updateHUD() {
       "</div>";
     if (remaining === 0) {
       chaosHtml +=
-        '<div style="color: #00ffff; margin-top: 10px;">Nothing remains. Only the cat.</div>';
+        '<div style="color: #00ffff; margin-top: 10px;">Nothing remains. Only the cat.</div>' +
+        '<div style="color: #ffffff; margin-top: 6px;">[R] Rebirth the Universe</div>';
     }
     if (chaosHtml !== lastHudHtml) {
       hudElement.innerHTML = chaosHtml;

@@ -20,6 +20,9 @@ const gameState = {
   fireCooldown: 0,
   // smoothed cat head rotation toward the current target (radians)
   catAngle: 0,
+  // end state: everything destroyed -> giant cat over the void (+ rebirth)
+  voidReached: false,
+  voidFade: 0,
 };
 
 // ==================== GLOBALS ====================
@@ -59,13 +62,54 @@ function setup() {
   // Auto-fire starts from config (debug helper / ?chaos runs)
   gameState.autoFire = GAME_CONFIG.catMode.autoFire;
 
+  // Ship + optional external art are created once; the world itself can be
+  // rebuilt by rebirthUniverse().
+  ship = new Ship(width / 2, height / 2);
+  loadTrashImages();
+  loadCatImage();
+  spawnWorld();
+
+  // Debug: boot straight into Cat Chaos via ?chaos=1 / ?cat=1
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("chaos") === "1" || params.get("cat") === "1") {
+      setCatMode(true);
+    }
+    // Debug: jump to the end state via ?void=1 (nothing left to destroy)
+    if (params.get("void") === "1") {
+      links = [];
+      navi = [];
+      planets = [];
+      asteroids = [];
+      setCatMode(true);
+    }
+  } catch (e) {
+    // URLSearchParams unavailable: ignore
+  }
+
+  // Mobile controls
+  setupMobileControls();
+}
+
+// (Re)build the cosmos from scratch. Used by setup() and rebirth.
+function spawnWorld() {
+  stars = [];
+  links = [];
+  navi = [];
+  planets = [];
+  nebulae = [];
+  asteroids = [];
+  particles = [];
+  explosions = [];
+  trash = [];
+  warpStreaks = [];
+  trashCollected = 0;
+  visited = new Set();
+
   // Stars
   for (let i = 0; i < GAME_CONFIG.counts.stars; i++) {
     stars.push(new Star(random(width), random(height)));
   }
-
-  // Ship
-  ship = new Ship(width / 2, height / 2);
 
   // Links — rejection-sample positions so links never spawn too close to
   // each other or to the ship (falls back to the most spaced candidate).
@@ -126,9 +170,7 @@ function setup() {
     asteroids.push(new Asteroid(x, y));
   }
 
-  // Trash collectibles — optional external sprites plus procedural fallback
-  loadTrashImages();
-  loadCatImage();
+  // Trash collectibles — rejection-sampled away from links and the ship
   for (let i = 0; i < GAME_CONFIG.counts.trash; i++) {
     let tx = 0;
     let ty = 0;
@@ -154,18 +196,12 @@ function setup() {
     trash.push(new Trash(tx, ty));
   }
 
-  // Debug: boot straight into Cat Chaos via ?chaos=1 / ?cat=1
-  try {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("chaos") === "1" || params.get("cat") === "1") {
-      setCatMode(true);
-    }
-  } catch (e) {
-    // URLSearchParams unavailable: ignore
-  }
-
-  // Mobile controls
-  setupMobileControls();
+  // Fresh state for the new cosmos
+  gameState.nearestLink = null;
+  gameState.selectedLinkIndex = null;
+  gameState.accelerationFactor = 0;
+  gameState.warpActive = false;
+  gameState.voidReached = false;
 }
 
 // ==================== P5.JS DRAW ====================
@@ -197,6 +233,9 @@ function draw() {
   }
   if (gameState.laserFrames > 0) gameState.laserFrames--;
   if (gameState.fireCooldown > 0) gameState.fireCooldown--;
+
+  // Detect the "everything destroyed" end state
+  updateVoid();
 
   // Stars
   for (let star of stars) {
@@ -357,6 +396,9 @@ function draw() {
   drawShipPrompt();
 
   if (shaking) pop();
+
+  // End-state: giant cat face fading over the void
+  drawVoidCat();
 
   // Mini-map of the world
   drawMinimap();
@@ -816,6 +858,65 @@ function chaosProgress() {
   return constrain(1 - chaosRemaining() / total, 0, 1);
 }
 
+// Once every destructible is gone the cat ascends over the void
+function updateVoid() {
+  if (
+    gameState.catMode &&
+    !gameState.voidReached &&
+    chaosRemaining() === 0
+  ) {
+    gameState.voidReached = true;
+    gameState.voidFade = 0;
+    gameState.autoFire = false;
+    playSound("void");
+  }
+  if (gameState.voidReached) {
+    gameState.voidFade = Math.min(1, gameState.voidFade + 0.012);
+  }
+}
+
+// Giant translucent cat face fading in over the empty cosmos
+function drawVoidCat() {
+  if (!gameState.voidReached || gameState.voidFade <= 0) return;
+  const f = gameState.voidFade;
+  const r = Math.min(width, height) * 0.42;
+  const a = f * 200;
+  push();
+  translate(width / 2, height / 2);
+  noStroke();
+  // Ears
+  fill(40, 8, 28, a);
+  triangle(-r * 0.62, -r * 0.3, -r * 0.82, -r * 1.0, -r * 0.12, -r * 0.5);
+  triangle(r * 0.62, -r * 0.3, r * 0.82, -r * 1.0, r * 0.12, -r * 0.5);
+  // Head
+  fill(28, 0, 18, a);
+  ellipse(0, 0, r * 1.6, r * 1.4);
+  // Glowing eyes
+  const glow = 0.6 + 0.4 * sin(frameCount * 0.08);
+  fill(255, 30, 30, a * glow);
+  ellipse(-r * 0.32, -r * 0.06, r * 0.3, r * 0.34);
+  ellipse(r * 0.32, -r * 0.06, r * 0.3, r * 0.34);
+  // Nose
+  fill(255, 120, 200, a * 0.8);
+  triangle(0, r * 0.22, -r * 0.08, r * 0.34, r * 0.08, r * 0.34);
+  pop();
+}
+
+// R respawns the cosmos after the void is reached
+function rebirthUniverse() {
+  if (!gameState.voidReached) return;
+  setCatMode(false);
+  spawnWorld();
+  ship.x = width / 2;
+  ship.y = height / 2;
+  gameState.voidFade = 0;
+  gameState.screenShakeFrames = GAME_CONFIG.catMode.screenShake * 2;
+  playSound("chaos");
+  // Big-bang flash from the center of the newborn universe
+  explosions.push(new SupernovaFlash(width / 2, height / 2, [255, 255, 255]));
+  explosions.push(new Shockwave(width / 2, height / 2, [255, 240, 200], 6));
+}
+
 // Nearest destructible object that is currently on screen. Major bodies
 // (links/planets/asteroids) always win so the cat doesn't waste shots on
 // the starfield; nebulae -> trash -> stars are bonus targets of last resort.
@@ -1100,6 +1201,11 @@ function keyPressed(e) {
   }
   if (gameState.catMode && (key === "f" || key === "F")) {
     if (!(e && e.repeat)) toggleAutoFire();
+    return;
+  }
+  // R rebirths the cosmos once nothing remains
+  if (gameState.catMode && gameState.voidReached && (key === "r" || key === "R")) {
+    if (!(e && e.repeat)) rebirthUniverse();
     return;
   }
   // Info/how-to-play toggle (I). The link list handles I in its own listener.
