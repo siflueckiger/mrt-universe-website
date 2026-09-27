@@ -51,3 +51,20 @@ Ideas to crank **Cat Chaos Mode** up to eleven. Roughly ordered by bang-for-buck
 - Keep destruction screen-space effects in the `explosions` array (update/display/isDead).
 - Keep the debug entry points working: `C` toggle, `?chaos=1` / `?cat=1`.
 - Update `AGENTS.md` checklist when the above lands.
+
+## 7. Minimap: show every destructible in chaos mode
+
+- In Cat Chaos, the minimap should plot **all destroyable objects**, not just links —
+  links, planets, asteroids, nebulae, trash and (optionally) stars, each with its own
+  color so the player can hunt down the last stragglers.
+- Only-remaining targets should read as "what's left"; destroyed ones disappear from
+  the minimap as they are destroyed (it already just plots the live arrays).
+- The minimap world bounds currently derive from `links` + ship only
+  (`drawMinimap()` in `js/game.js`); in chaos mode expand the bounds to include the
+  other destructible arrays so everything fits inside the box.
+- Keep regular (non-chaos) mode exactly as it is (links/ship only) — this is a
+  chaos-mode-only overlay so the normal exploration minimap visuals don't change.
+- Add a chaos-mode legend (e.g. planet/asteroid/nebula/trash/star swatches) instead of
+  the usual "new / visited" legend.
+- New knobs in `GAME_CONFIG.minimap` (dot sizes / colors per kind), gated on
+  `gameState.catMode`.
