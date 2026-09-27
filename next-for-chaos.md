@@ -52,7 +52,11 @@ Ideas to crank **Cat Chaos Mode** up to eleven. Roughly ordered by bang-for-buck
 - Keep the debug entry points working: `C` toggle, `?chaos=1` / `?cat=1`.
 - Update `AGENTS.md` checklist when the above lands.
 
-## 7. Minimap: show every destructible in chaos mode
+## 7. Minimap: show every destructible in chaos mode — SUPERSEDED
+
+> This was implemented, then retired: staring at the corner map killed the arcade
+> action. The minimap is now **hidden** in Cat Chaos (section 8) and directional
+> guidance moves on-screen. Kept here for history.
 
 - In Cat Chaos, the minimap should plot **all destroyable objects**, not just links —
   links, planets, asteroids, nebulae, trash and (optionally) stars, each with its own
@@ -77,4 +81,33 @@ Ideas to crank **Cat Chaos Mode** up to eleven. Roughly ordered by bang-for-buck
   legend remains outside chaos.
 - Colors: link hot-pink (pulsing), planet amber, asteroid gray, nebula violet, trash cyan,
   ship white. Chaos frame is dark crimson with a red border.
+
+## 8. Chaos HUD glitch + on-screen guidance
+
+The minimap became a corner radar that pulled the player's eyes off the cat. Fix:
+glitch the whole explorer HUD away and guide the player with on-screen cues.
+
+### Phase 1 — HUD glitch + centered readout (implemented)
+
+- When `body.chaos-active`:
+  - `#hud` + `#controls` play `hud-glitch-out` (chromatic/skew/clip-path flicker) then
+    stay hidden (`animation-fill-mode: forwards`, `pointer-events: none`).
+  - The **minimap is not drawn** in cat mode; the link border navigators and the
+    `[ENTER] Open` ship prompt are suppressed.
+  - A new centered `#chaos-hud` fades in:
+    - big pulsing **`🔥 CAT CHAOS MODE 🔥`** title (red glow, chromatic offset, twitch).
+    - `[ TARGETS REMAINING: N ]` at the bottom (switches to
+      `[ NOTHING REMAINS. ONLY THE CAT. ]` in the void).
+    - key hints: `SPACE Fire · F Auto-Fire [ON/OFF] · C Exit`.
+  - Live values come from `updateChaosHud()` in `js/ui.js` (change-only DOM writes).
+- Normal-mode minimap and explorer HUD are unchanged (reverts the section 7 work).
+
+### Phase 2 — On-screen target guidance (to do)
+
+- **Orbiting target arrow** around the cat head pointing at the nearest off-screen
+  destructible (pulsing neon red).
+- **Screen-edge threat chevrons** along the viewport border for off-screen targets,
+  handing off to the real object as it scrolls into view.
+- Targets to consider: links, planets, asteroids, nebulae, trash (stars optional).
+
 

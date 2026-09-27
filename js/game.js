@@ -281,7 +281,9 @@ function draw() {
     }
   }
 
-  // Navigators - show direction to links
+  // Navigators - show direction to links (silenced in Cat Chaos; the
+  // on-screen target chevrons take over there)
+  if (!gameState.catMode)
   for (let i = 0; i < links.length; i++) {
     let isNearest = links[i] === gameState.nearestLink;
     let col = isNearest ? color(0, 255, 255, 180) : color(255, 0, 0, 180);
@@ -395,8 +397,8 @@ function draw() {
   // End-state: giant cat face fading over the void
   drawVoidCat();
 
-  // Mini-map of the world
-  drawMinimap();
+  // Mini-map of the world (hidden in Cat Chaos — guidance moves on-screen)
+  if (!gameState.catMode) drawMinimap();
 
   // Chaos wrath drone swells with destruction progress (silent outside cat mode)
   if (typeof setChaosDrone === "function") {
@@ -763,6 +765,7 @@ function drawWarpStreaks() {
 function drawShipPrompt() {
   if (
     !gameState.appReady ||
+    gameState.catMode ||
     previewOpen ||
     linksListOpen ||
     infoMenuOpen ||
@@ -1323,151 +1326,77 @@ function markVisited(link) {
 
 function drawMinimap() {
   const cfg = GAME_CONFIG.minimap;
-  const cc = cfg.chaos;
-  const chaos = gameState.catMode;
   const isMobile =
     typeof mobileQuery !== "undefined" && mobileQuery.matches;
   const x = width - cfg.size - cfg.margin;
   const y = isMobile ? cfg.topMobile : cfg.top;
 
-  // World bounds = bounding box of the ship plus every plotted object.
-  // In chaos mode all remaining destructibles are included; stars are
-  // screen-space dust and deliberately excluded.
+  // World bounds = bounding box of all links + ship
   let minX = ship.x;
   let minY = ship.y;
   let maxX = ship.x;
   let maxY = ship.y;
-  const include = function (obj) {
-    if (!obj || typeof obj.x !== "number") return;
-    minX = Math.min(minX, obj.x);
-    minY = Math.min(minY, obj.y);
-    maxX = Math.max(maxX, obj.x);
-    maxY = Math.max(maxY, obj.y);
-  };
-  for (let l of links) include(l);
-  if (chaos) {
-    for (let p of planets) include(p);
-    for (let a of asteroids) include(a);
-    for (let n of nebulae) include(n);
-    for (let t of trash) include(t);
+  for (let l of links) {
+    minX = Math.min(minX, l.x);
+    minY = Math.min(minY, l.y);
+    maxX = Math.max(maxX, l.x);
+    maxY = Math.max(maxY, l.y);
   }
-  // Guard against a zero-size box (empty void) so map() never divides by 0
-  if (maxX - minX < 1) {
-    minX -= 100;
-    maxX += 100;
-  }
-  if (maxY - minY < 1) {
-    minY -= 100;
-    maxY += 100;
-  }
-
-  const pad = 4;
-  const mapX = function (v) {
-    return map(v, minX, maxX, x + pad, x + cfg.size - pad);
-  };
-  const mapY = function (v) {
-    return map(v, minY, maxY, y + pad, y + cfg.size - pad);
-  };
-  const dotRect = function (ox, oy, s, col) {
-    fill(col[0], col[1], col[2], col.length > 3 ? col[3] : 255);
-    rect(ox - s / 2, oy - s / 2, s, s);
-  };
-  const dotEllipse = function (ox, oy, s, col) {
-    fill(col[0], col[1], col[2], col.length > 3 ? col[3] : 255);
-    ellipse(ox, oy, s);
-  };
 
   push();
   noStroke();
-  if (chaos) {
-    fill(cc.bg[0], cc.bg[1], cc.bg[2], cc.bg[3]);
-  } else {
-    fill(0, 0, 20, 180);
-  }
+  fill(0, 0, 20, 180);
   rect(x, y, cfg.size, cfg.size, 4);
-  if (chaos) {
-    stroke(cc.border[0], cc.border[1], cc.border[2], cc.border[3]);
-  } else {
-    stroke(0, 255, 255, 90);
-  }
+  stroke(0, 255, 255, 90);
   strokeWeight(1);
   noFill();
   rect(x, y, cfg.size, cfg.size, 4);
   noStroke();
 
-  if (chaos) {
-    // Every remaining destructible, faintest/largest first
-    for (let n of nebulae) dotEllipse(mapX(n.x), mapY(n.y), cc.nebula.size, cc.nebula.color);
-    for (let t of trash) dotRect(mapX(t.x), mapY(t.y), cc.trash.size, cc.trash.color);
-    for (let a of asteroids) dotRect(mapX(a.x), mapY(a.y), cc.asteroid.size, cc.asteroid.color);
-    for (let p of planets) dotEllipse(mapX(p.x), mapY(p.y), cc.planet.size, cc.planet.color);
-    for (let i = 0; i < links.length; i++) {
-      let l = links[i];
-      // Nearest/selected links read larger; all links pulse so they pop
-      let base = cc.link.size;
-      if (l === gameState.nearestLink) base *= 1.4;
-      else if (
-        gameState.selectedLinkIndex !== null &&
-        links[gameState.selectedLinkIndex] === l
-      ) {
-        base *= 1.4;
-      }
+  for (let i = 0; i < links.length; i++) {
+    let l = links[i];
+    let mx = map(l.x, minX, maxX, x + 4, x + cfg.size - 4);
+    let my = map(l.y, minY, maxY, y + 4, y + cfg.size - 4);
+    if (l === gameState.nearestLink) {
+      fill(0, 255, 255);
+      rect(mx - 2, my - 2, 4, 4);
+    } else if (
+      gameState.selectedLinkIndex !== null &&
+      links[gameState.selectedLinkIndex] === l
+    ) {
+      fill(0, 255, 0);
+      rect(mx - 2, my - 2, 4, 4);
+    } else if (isVisited(l)) {
+      // visited: small and faint
+      fill(120, 120, 120, 90);
+      rect(mx - 1.5, my - 1.5, 3, 3);
+    } else {
+      // unvisited: bright yellow and pulsing so it stands out
       let pulse = 1 + 0.35 * sin(frameCount * 0.1 + i * 1.7);
-      dotRect(mapX(l.x), mapY(l.y), base * pulse, cc.link.color);
-    }
-  } else {
-    for (let i = 0; i < links.length; i++) {
-      let l = links[i];
-      let mx = mapX(l.x);
-      let my = mapY(l.y);
-      if (l === gameState.nearestLink) {
-        fill(0, 255, 255);
-        rect(mx - 2, my - 2, 4, 4);
-      } else if (
-        gameState.selectedLinkIndex !== null &&
-        links[gameState.selectedLinkIndex] === l
-      ) {
-        fill(0, 255, 0);
-        rect(mx - 2, my - 2, 4, 4);
-      } else if (isVisited(l)) {
-        // visited: small and faint
-        fill(120, 120, 120, 90);
-        rect(mx - 1.5, my - 1.5, 3, 3);
-      } else {
-        // unvisited: bright yellow and pulsing so it stands out
-        let pulse = 1 + 0.35 * sin(frameCount * 0.1 + i * 1.7);
-        let s = 5 * pulse;
-        fill(255, 220, 0);
-        rect(mx - s / 2, my - s / 2, s, s);
-      }
+      let s = 5 * pulse;
+      fill(255, 220, 0);
+      rect(mx - s / 2, my - s / 2, s, s);
     }
   }
 
-  // Player ship marker
-  let sx = mapX(ship.x);
-  let sy = mapY(ship.y);
-  if (chaos) {
-    dotRect(sx, sy, 5, cc.ship);
-  } else {
-    fill(255, 0, 255);
-    rect(sx - 2, sy - 2, 4, 4);
-  }
+  fill(255, 0, 255);
+  let sx = map(ship.x, minX, maxX, x + 4, x + cfg.size - 4);
+  let sy = map(ship.y, minY, maxY, y + 4, y + cfg.size - 4);
+  rect(sx - 2, sy - 2, 4, 4);
 
-  // Legend (normal mode only — chaos mode stays clean)
-  if (!chaos) {
-    textAlign(LEFT, TOP);
-    textSize(10);
-    let lx = x;
-    let ly = y + cfg.size + 8;
-    fill(255, 220, 0);
-    text("●", lx, ly);
-    fill(255, 255, 255, 180);
-    text("new", lx + 12, ly);
-    fill(120, 120, 120);
-    text("●", lx + 40, ly);
-    fill(255, 255, 255, 180);
-    text("visited", lx + 52, ly);
-  }
+  // Legend: yellow = unvisited, gray = visited
+  textAlign(LEFT, TOP);
+  textSize(10);
+  let lx = x;
+  let ly = y + cfg.size + 8;
+  fill(255, 220, 0);
+  text("●", lx, ly);
+  fill(255, 255, 255, 180);
+  text("new", lx + 12, ly);
+  fill(120, 120, 120);
+  text("●", lx + 40, ly);
+  fill(255, 255, 255, 180);
+  text("visited", lx + 52, ly);
 
   pop();
 }

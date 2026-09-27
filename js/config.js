@@ -127,18 +127,6 @@ const GAME_CONFIG = {
     margin: 20,
     top: 20,
     topMobile: 180,
-    // Chaos-mode overlay: plot every remaining destructible (stars excluded).
-    // Colors are [r,g,b(,a)]; sizes are marker pixels.
-    chaos: {
-      bg: [20, 0, 8, 200],
-      border: [255, 50, 50, 150],
-      nebula: { color: [180, 80, 255, 120], size: 7 },
-      trash: { color: [0, 255, 255], size: 3 },
-      asteroid: { color: [140, 140, 140], size: 3 },
-      planet: { color: [255, 160, 40], size: 5 },
-      link: { color: [255, 60, 180], size: 5 },
-      ship: [255, 255, 255],
-    },
   },
   sound: {
     enabled: true,

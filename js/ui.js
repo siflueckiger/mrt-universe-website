@@ -151,8 +151,38 @@ function updateChaosOverlay() {
   }
 }
 
+// Big centered chaos readout (title / targets remaining / key hints).
+// Only the live parts are written, and only when they change.
+let lastChaosStatus = null;
+let lastChaosAuto = null;
+
+function updateChaosHud() {
+  if (!gameState.catMode) return;
+  const statusEl = document.getElementById("chaos-status");
+  if (statusEl) {
+    const remaining = chaosRemaining();
+    const txt =
+      remaining === 0
+        ? "[ NOTHING REMAINS. ONLY THE CAT. ]"
+        : "[ TARGETS REMAINING: " + remaining + " ]";
+    if (txt !== lastChaosStatus) {
+      lastChaosStatus = txt;
+      statusEl.textContent = txt;
+    }
+  }
+  const autoEl = document.getElementById("chaos-autofire");
+  if (autoEl) {
+    const txt = gameState.autoFire ? "[ON]" : "[OFF]";
+    if (txt !== lastChaosAuto) {
+      lastChaosAuto = txt;
+      autoEl.textContent = txt;
+    }
+  }
+}
+
 function updateHUD() {
   updateChaosOverlay();
+  updateChaosHud();
   let hudElement = document.getElementById("nearest-link");
 
   if (gameState.catMode) {

@@ -525,3 +525,142 @@ body.chaos-active #chaos-overlay {
   }
 }
 
+/* ---------- Cat Chaos HUD ---------- */
+/* When chaos awakens the whole explorer HUD glitches out and a big
+   centered CAT CHAOS MODE readout takes over. Pure visual. */
+body.chaos-active #hud,
+body.chaos-active #controls {
+  animation: hud-glitch-out 0.7s steps(2, end) forwards;
+  pointer-events: none;
+}
+@keyframes hud-glitch-out {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) skewX(0);
+    clip-path: inset(0 0 0 0);
+    filter: none;
+  }
+  15% {
+    opacity: 0.9;
+    transform: translate(-6px, 2px) skewX(9deg);
+    clip-path: inset(22% 0 30% 0);
+    filter: hue-rotate(120deg);
+  }
+  30% {
+    opacity: 0.8;
+    transform: translate(5px, -3px) skewX(-7deg);
+    clip-path: inset(42% 0 12% 0);
+    filter: hue-rotate(240deg);
+  }
+  45% {
+    opacity: 0.55;
+    transform: translate(-4px, 4px);
+    clip-path: inset(12% 0 52% 0);
+  }
+  60% {
+    opacity: 0.35;
+    transform: translate(4px, -2px) skewX(5deg);
+    clip-path: inset(64% 0 6% 0);
+    filter: hue-rotate(300deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(0, 0);
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+#chaos-hud {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  pointer-events: none;
+  display: none;
+}
+body.chaos-active #chaos-hud {
+  display: block;
+}
+#chaos-title {
+  position: absolute;
+  top: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 34px;
+  font-weight: 900;
+  letter-spacing: 5px;
+  white-space: nowrap;
+  color: #ff2b2b;
+  text-shadow:
+    0 0 8px #ff0033,
+    0 0 20px #ff0033,
+    2px 0 #00ffff,
+    -2px 0 #ff00ff;
+  animation: chaos-title-glitch 2.4s infinite;
+}
+@keyframes chaos-title-glitch {
+  0%,
+  100% {
+    transform: translateX(-50%);
+  }
+  90% {
+    transform: translateX(-50%);
+  }
+  91% {
+    transform: translateX(calc(-50% - 4px)) skewX(7deg);
+  }
+  92% {
+    transform: translateX(calc(-50% + 4px)) skewX(-7deg);
+  }
+  93% {
+    transform: translateX(-50%);
+  }
+  96% {
+    opacity: 1;
+  }
+  97% {
+    opacity: 0.5;
+  }
+  98% {
+    opacity: 1;
+  }
+}
+#chaos-status {
+  position: absolute;
+  bottom: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 18px;
+  letter-spacing: 2px;
+  white-space: nowrap;
+  color: #ff5555;
+  text-shadow: 0 0 10px #ff0033;
+}
+#chaos-keys {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  white-space: nowrap;
+  color: #999;
+}
+#chaos-keys .key {
+  color: #00ffff;
+}
+#chaos-keys #chaos-autofire {
+  color: #ffaa00;
+}
+@media (max-width: 768px) {
+  #chaos-title {
+    font-size: 22px;
+    letter-spacing: 3px;
+  }
+  #chaos-status {
+    font-size: 15px;
+  }
+  #chaos-keys {
+    font-size: 11px;
+  }
+}
+
+
