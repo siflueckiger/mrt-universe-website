@@ -85,8 +85,6 @@ class Ship {
   // configured, otherwise a procedural retro pixel-art cyber-cat.
   displayCat() {
     const r = this.size * GAME_CONFIG.catMode.scale; // footprint radius
-    // Aim the whole head toward the current target (eased in draw loop)
-    rotate(gameState.catAngle || 0);
     if (catImage) {
       imageMode(CENTER);
       image(catImage, 0, 0, r * 2, r * 2);

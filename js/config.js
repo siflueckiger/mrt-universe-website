@@ -100,7 +100,6 @@ const GAME_CONFIG = {
     // Puffs in the gas cloud left by a destroyed nebula
     gasPuffs: 12,
     fireRate: 6, // frames between shots while holding SPACE / auto-firing
-    aimEase: 0.18, // how fast the cat head swings toward its target (0..1)
     // Cascade detonations: a blast can ignite nearby objects
     cascadeChance: 0.3,
     cascadeRadius: 170,

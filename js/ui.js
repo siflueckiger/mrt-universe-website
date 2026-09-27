@@ -167,8 +167,7 @@ function updateHUD() {
       "</div>";
     if (remaining === 0) {
       chaosHtml +=
-        '<div style="color: #00ffff; margin-top: 10px;">Nothing remains. Only the cat.</div>' +
-        '<div style="color: #ffffff; margin-top: 6px;">[R] Rebirth the Universe</div>';
+        '<div style="color: #00ffff; margin-top: 10px;">Nothing remains. Only the cat.</div>';
     }
     if (chaosHtml !== lastHudHtml) {
       hudElement.innerHTML = chaosHtml;

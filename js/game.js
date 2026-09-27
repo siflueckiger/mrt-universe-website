@@ -18,8 +18,6 @@ const gameState = {
   // rapid/auto fire state (F toggles auto; holding SPACE rapid-fires)
   autoFire: false,
   fireCooldown: 0,
-  // smoothed cat head rotation toward the current target (radians)
-  catAngle: 0,
   // end state: everything destroyed -> giant cat over the void (+ rebirth)
   voidReached: false,
   voidFade: 0,
@@ -382,9 +380,6 @@ function draw() {
 
   // Hyperspace streaks while warping (behind the ship)
   drawWarpStreaks();
-
-  // Ease the cat head toward its target before drawing the ship
-  updateCatAim();
 
   // Ship
   ship.display();
@@ -831,7 +826,6 @@ function setCatMode(on) {
     gameState.laserTarget = null;
     gameState.laserFrames = 0;
     gameState.fireCooldown = 0;
-    gameState.catAngle = 0;
     if (typeof stopChaosDrone === "function") stopChaosDrone();
   }
 }
@@ -899,6 +893,12 @@ function drawVoidCat() {
   // Nose
   fill(255, 120, 200, a * 0.8);
   triangle(0, r * 0.22, -r * 0.08, r * 0.34, r * 0.08, r * 0.34);
+  // Pulsating rebirth prompt beneath the giant cat head
+  const pulse = 0.6 + 0.4 * sin(frameCount * 0.12);
+  textAlign(CENTER, CENTER);
+  textSize(Math.min(width, height) * 0.038);
+  fill(0, 255, 255, f * 255 * pulse);
+  text("[R] Rebirth the Universe", 0, r * 0.95);
   pop();
 }
 
@@ -1100,16 +1100,17 @@ function destroyTarget(t) {
 
 function fireCatLaser() {
   if (!gameState.catMode) return;
-  gameState.laserFrames = GAME_CONFIG.catMode.laserFrames;
-  gameState.screenShakeFrames = GAME_CONFIG.catMode.screenShake;
-  playSound("laser");
 
   const target = getNearestOnScreenTarget();
   if (!target) {
+    // Nothing to hit: don't shake, spark or blip (matters for auto-fire)
     gameState.laserTarget = null;
     return;
   }
 
+  gameState.laserFrames = GAME_CONFIG.catMode.laserFrames;
+  gameState.screenShakeFrames = GAME_CONFIG.catMode.screenShake;
+  playSound("laser");
   gameState.laserTarget = { x: target.obj.x, y: target.obj.y };
   createExplosion(target.obj.x, target.obj.y, target.kind, target.obj);
   const destroySound = {
@@ -1129,16 +1130,9 @@ function drawLaser() {
   const t = gameState.laserTarget;
   if (!t || gameState.laserFrames <= 0) return;
   const r = ship.size * GAME_CONFIG.catMode.scale;
-  // Eye positions follow the cat's current aim so the beam always starts
-  // at the (rotated) eyes.
-  const ca = gameState.catAngle;
-  const cosA = cos(ca);
-  const sinA = sin(ca);
-  const rot = function (px, py) {
-    return [ship.x + px * cosA - py * sinA, ship.y + px * sinA + py * cosA];
-  };
-  const eyeL = rot(-r * 0.32, -r * 0.06);
-  const eyeR = rot(r * 0.32, -r * 0.06);
+  const eyeY = ship.y - r * 0.06;
+  const exL = ship.x - r * 0.32;
+  const exR = ship.x + r * 0.32;
   const a = map(
     gameState.laserFrames,
     0,
@@ -1150,30 +1144,13 @@ function drawLaser() {
   strokeCap(ROUND);
   stroke(255, 60, 60, a * 0.5);
   strokeWeight(9);
-  line(eyeL[0], eyeL[1], t.x, t.y);
-  line(eyeR[0], eyeR[1], t.x, t.y);
+  line(exL, eyeY, t.x, t.y);
+  line(exR, eyeY, t.x, t.y);
   stroke(255, 255, 255, a);
   strokeWeight(3);
-  line(eyeL[0], eyeL[1], t.x, t.y);
-  line(eyeR[0], eyeR[1], t.x, t.y);
+  line(exL, eyeY, t.x, t.y);
+  line(exR, eyeY, t.x, t.y);
   pop();
-}
-
-// Smoothly swing the cat head toward the current laser target
-function updateCatAim() {
-  if (!gameState.catMode) {
-    gameState.catAngle = 0;
-    return;
-  }
-  const t = gameState.laserTarget;
-  let target = 0;
-  if (t && gameState.laserFrames > 0) {
-    target = Math.atan2(t.y - ship.y, t.x - ship.x) + PI / 2;
-  }
-  let diff = target - gameState.catAngle;
-  while (diff > PI) diff -= TWO_PI;
-  while (diff < -PI) diff += TWO_PI;
-  gameState.catAngle += diff * GAME_CONFIG.catMode.aimEase;
 }
 
 // F toggles continuous auto-fire while in cat mode
