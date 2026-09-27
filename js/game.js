@@ -394,6 +394,9 @@ function draw() {
 
   if (shaking) pop();
 
+  // On-screen guidance toward off-screen victims (Cat Chaos only)
+  drawTargetGuidance();
+
   // End-state: giant cat face fading over the void
   drawVoidCat();
 
@@ -916,6 +919,115 @@ function drawVoidCat() {
   textSize(Math.min(width, height) * 0.038);
   fill(0, 255, 255, f * 255 * pulse);
   text("[R] Rebirth the Universe", 0, r * 0.95);
+  pop();
+}
+
+// ==================== TARGET GUIDANCE ====================
+// With the minimap hidden in Cat Chaos, off-screen victims are called out
+// on the main screen: an arrow orbiting the cat points at the nearest one
+// and neon chevrons sit on the viewport edge for the closest few.
+
+// Palette shared with destruction FX so kinds read consistently
+const CAT_TARGET_COLORS = {
+  link: [255, 60, 180],
+  planet: [255, 160, 40],
+  asteroid: [175, 175, 175],
+  nebula: [190, 100, 255],
+  trash: [0, 255, 255],
+};
+
+function isTargetOnScreen(obj, margin) {
+  const m = margin || 0;
+  return (
+    obj.x >= -m && obj.x <= width + m && obj.y >= -m && obj.y <= height + m
+  );
+}
+
+function drawTargetGuidance() {
+  if (!gameState.catMode || gameState.voidReached) return;
+  // Keep the screen clear while a pause overlay is up
+  if (linksListOpen || infoMenuOpen || previewOpen) return;
+
+  const cfg = GAME_CONFIG.catMode.markers;
+
+  // Gather off-screen finite targets (stars are ignored — they wrap around)
+  const offscreen = [];
+  const consider = function (obj, kind) {
+    if (!obj || typeof obj.x !== "number") return;
+    if (isTargetOnScreen(obj, cfg.screenMargin)) return;
+    offscreen.push({
+      obj: obj,
+      kind: kind,
+      d: dist(ship.x, ship.y, obj.x, obj.y),
+    });
+  };
+  for (let l of links) consider(l, "link");
+  for (let p of planets) consider(p, "planet");
+  for (let a of asteroids) consider(a, "asteroid");
+  for (let n of nebulae) consider(n, "nebula");
+  for (let t of trash) consider(t, "trash");
+  if (offscreen.length === 0) return;
+  offscreen.sort(function (a, b) {
+    return a.d - b.d;
+  });
+
+  // Edge chevrons for the nearest off-screen targets
+  const shown = offscreen.slice(0, cfg.edgeMarkers);
+  for (let m of shown) drawEdgeChevron(m, cfg);
+
+  // Orbiting arrow on the cat pointing at the closest off-screen target
+  drawOrbitArrow(offscreen[0], cfg);
+}
+
+// Neon triangle pinned to the viewport edge in the target's direction
+function drawEdgeChevron(m, cfg) {
+  const ang = Math.atan2(m.obj.y - ship.y, m.obj.x - ship.x);
+  const dx = Math.cos(ang);
+  const dy = Math.sin(ang);
+  const left = cfg.edgeInset;
+  const right = width - cfg.edgeInset;
+  const top = cfg.edgeInset;
+  const bottom = height - cfg.edgeInset;
+  // Distance along the ray to the first viewport edge it hits
+  let s = Infinity;
+  if (dx > 0) s = Math.min(s, (right - ship.x) / dx);
+  if (dx < 0) s = Math.min(s, (left - ship.x) / dx);
+  if (dy > 0) s = Math.min(s, (bottom - ship.y) / dy);
+  if (dy < 0) s = Math.min(s, (top - ship.y) / dy);
+  if (!isFinite(s) || s <= 0) return;
+
+  const ex = ship.x + dx * s;
+  const ey = ship.y + dy * s;
+  const col = CAT_TARGET_COLORS[m.kind] || [255, 60, 60];
+  const pulse = 0.55 + 0.45 * sin(frameCount * 0.16 + m.d * 0.01);
+
+  push();
+  translate(ex, ey);
+  rotate(ang);
+  noStroke();
+  const a = cfg.arrowSize * (0.85 + 0.25 * pulse);
+  fill(col[0], col[1], col[2], 220 * pulse);
+  triangle(a, 0, -a * 0.7, -a * 0.62, -a * 0.7, a * 0.62);
+  pop();
+}
+
+// Pulsing arrow orbiting the cat head, aimed at the nearest off-screen target
+function drawOrbitArrow(m, cfg) {
+  const ang = Math.atan2(m.obj.y - ship.y, m.obj.x - ship.x);
+  const pulse = 1 + 0.16 * sin(frameCount * 0.2);
+  const col = CAT_TARGET_COLORS[m.kind] || [255, 60, 60];
+  const px = ship.x + Math.cos(ang) * cfg.orbitRadius;
+  const py = ship.y + Math.sin(ang) * cfg.orbitRadius;
+
+  push();
+  translate(px, py);
+  rotate(ang);
+  noStroke();
+  const s = cfg.arrowSize * pulse;
+  fill(255, 40, 40, 90);
+  triangle(s * 1.3, 0, -s * 0.9, -s * 0.9, -s * 0.9, s * 0.9);
+  fill(col[0], col[1], col[2], 240);
+  triangle(s, 0, -s * 0.6, -s * 0.6, -s * 0.6, s * 0.6);
   pop();
 }
 

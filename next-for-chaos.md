@@ -102,12 +102,15 @@ glitch the whole explorer HUD away and guide the player with on-screen cues.
   - Live values come from `updateChaosHud()` in `js/ui.js` (change-only DOM writes).
 - Normal-mode minimap and explorer HUD are unchanged (reverts the section 7 work).
 
-### Phase 2 — On-screen target guidance (to do)
+### Phase 2 — On-screen target guidance (implemented)
 
 - **Orbiting target arrow** around the cat head pointing at the nearest off-screen
-  destructible (pulsing neon red).
-- **Screen-edge threat chevrons** along the viewport border for off-screen targets,
-  handing off to the real object as it scrolls into view.
-- Targets to consider: links, planets, asteroids, nebulae, trash (stars optional).
+  destructible (pulsing, tinted by target kind) — `drawOrbitArrow()`.
+- **Screen-edge threat chevrons** along the viewport border for the nearest few
+  off-screen targets, handing off to the real object as it scrolls into view —
+  `drawEdgeChevron()` / `drawTargetGuidance()`.
+- Targets: links, planets, asteroids, nebulae, trash (stars ignored — they wrap
+  around the screen). All tunables in `GAME_CONFIG.catMode.markers`.
+- Hidden while a pause overlay is open or once the void is reached.
 
 

@@ -121,6 +121,14 @@ const GAME_CONFIG = {
     overlayVoidIntensity: 0.14,
     // Endless ambient screen shake (pixels) at 100% destruction progress
     ambientShakeMax: 3.5,
+    // On-screen target guidance while hunting (cat orbiting arrow + edge chevrons)
+    markers: {
+      screenMargin: 40, // objects within this margin of the viewport read as on-screen
+      orbitRadius: 82, // radius of the arrow orbiting the cat head
+      arrowSize: 11, // chevron/arrow size in pixels
+      edgeMarkers: 4, // max off-screen targets shown on the viewport edge
+      edgeInset: 28, // distance of edge chevrons from the viewport border
+    },
   },
   minimap: {
     size: 120,
