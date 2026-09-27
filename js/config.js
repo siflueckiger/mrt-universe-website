@@ -96,6 +96,11 @@ const GAME_CONFIG = {
     explosionParticles: 34,
     shardLifespan: 45,
     autoFire: false, // debug helper: fire continuously when on
+    // Red glimmer overlay intensity at 0% and 100% destruction progress
+    overlayIntensityMin: 0.22,
+    overlayIntensityMax: 0.72,
+    // Endless ambient screen shake (pixels) at 100% destruction progress
+    ambientShakeMax: 3.5,
   },
   minimap: {
     size: 120,

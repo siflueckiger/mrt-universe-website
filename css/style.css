@@ -476,3 +476,52 @@ body.preview-open {
     opacity: 1;
   }
 }
+
+/* Cat Chaos red glimmer overlay — below the CRT scanlines. Hidden by
+   default; body.chaos-active reveals it and --chaos-level (0..1, set from
+   game.js as destruction ramps up) drives the intensity. */
+#chaos-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2900;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    radial-gradient(
+      ellipse at center,
+      rgba(255, 60, 60, 0.1) 0%,
+      rgba(200, 0, 0, 0.32) 62%,
+      rgba(120, 0, 0, 0.55) 100%
+    );
+  transition: opacity 0.8s ease;
+}
+body.chaos-active #chaos-overlay {
+  animation: chaos-glimmer 2.6s ease-in-out infinite;
+}
+@keyframes chaos-glimmer {
+  0%,
+  100% {
+    opacity: calc(var(--chaos-level, 0.3) * 0.78);
+    transform: scale(1);
+    filter: brightness(0.95);
+  }
+  35% {
+    opacity: calc(var(--chaos-level, 0.3) * 0.66);
+    transform: scale(1.012);
+    filter: brightness(0.88);
+  }
+  50% {
+    opacity: var(--chaos-level, 0.3);
+    transform: scale(1.05);
+    filter: brightness(1.25);
+  }
+  52% {
+    opacity: calc(var(--chaos-level, 0.3) * 0.72);
+  }
+  70% {
+    opacity: calc(var(--chaos-level, 0.3) * 0.9);
+    transform: scale(1.03);
+    filter: brightness(1.1);
+  }
+}
+

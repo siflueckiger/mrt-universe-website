@@ -125,7 +125,30 @@ let mobileQuery =
 // Last HUD markup; skip the innerHTML write when nothing changed
 let lastHudHtml = null;
 
+// Cat Chaos red glimmer overlay: body class + intensity custom property.
+// Change-only DOM writes, mirroring the HUD caching above.
+let chaosOverlayActive = null;
+let chaosOverlayLevel = -1;
+
+function updateChaosOverlay() {
+  const active = gameState.catMode;
+  if (active !== chaosOverlayActive) {
+    chaosOverlayActive = active;
+    document.body.classList.toggle("chaos-active", active);
+  }
+  if (!active) return;
+  const min = GAME_CONFIG.catMode.overlayIntensityMin;
+  const max = GAME_CONFIG.catMode.overlayIntensityMax;
+  // Round so we only touch the DOM when the level visibly changes
+  const level = Math.round((min + (max - min) * chaosProgress()) * 1000) / 1000;
+  if (level !== chaosOverlayLevel) {
+    chaosOverlayLevel = level;
+    document.body.style.setProperty("--chaos-level", level);
+  }
+}
+
 function updateHUD() {
+  updateChaosOverlay();
   let hudElement = document.getElementById("nearest-link");
 
   if (gameState.catMode) {

@@ -166,12 +166,26 @@ function draw() {
   background(10, 10, 30);
 
   // Cat-mode destruction screen shake (world only; HUD/minimap stay stable)
-  const shaking = gameState.screenShakeFrames > 0;
-  if (shaking) {
+  let shakeX = 0;
+  let shakeY = 0;
+  if (gameState.screenShakeFrames > 0) {
     const s = GAME_CONFIG.catMode.screenShake;
-    push();
-    translate(random(-s, s), random(-s, s));
+    shakeX = random(-s, s);
+    shakeY = random(-s, s);
     gameState.screenShakeFrames--;
+  }
+  // Endless ambient dread rattle that grows as the cosmos is destroyed
+  if (gameState.catMode) {
+    const ambient = chaosProgress() * GAME_CONFIG.catMode.ambientShakeMax;
+    if (ambient > 0) {
+      shakeX += random(-ambient, ambient);
+      shakeY += random(-ambient, ambient);
+    }
+  }
+  const shaking = shakeX !== 0 || shakeY !== 0;
+  if (shaking) {
+    push();
+    translate(shakeX, shakeY);
   }
   if (gameState.laserFrames > 0) gameState.laserFrames--;
 
@@ -765,6 +779,18 @@ function toggleCatMode() {
 // Total destructible objects still standing
 function chaosRemaining() {
   return links.length + planets.length + asteroids.length;
+}
+
+// Starting number of destructibles (linkData/counts are never mutated)
+function chaosTotal() {
+  return linkData.length + GAME_CONFIG.counts.planets + GAME_CONFIG.counts.asteroids;
+}
+
+// Destruction progress 0..1 (feeds overlay escalation + ambient shake)
+function chaosProgress() {
+  const total = chaosTotal();
+  if (total <= 0) return 1;
+  return constrain(1 - chaosRemaining() / total, 0, 1);
 }
 
 // Nearest destructible object that is currently on screen
