@@ -125,14 +125,73 @@ let mobileQuery =
 // Last HUD markup; skip the innerHTML write when nothing changed
 let lastHudHtml = null;
 
+// Cat Chaos red glimmer overlay: body class + intensity custom property.
+// Change-only DOM writes, mirroring the HUD caching above.
+let chaosOverlayActive = null;
+let chaosOverlayLevel = -1;
+
+function updateChaosOverlay() {
+  const active = gameState.catMode;
+  if (active !== chaosOverlayActive) {
+    chaosOverlayActive = active;
+    document.body.classList.toggle("chaos-active", active);
+  }
+  if (!active) return;
+  const min = GAME_CONFIG.catMode.overlayIntensityMin;
+  const max = GAME_CONFIG.catMode.overlayIntensityMax;
+  // Once only the cat remains the red dims to a brooding glow
+  const base = gameState.voidReached
+    ? GAME_CONFIG.catMode.overlayVoidIntensity
+    : min + (max - min) * chaosProgress();
+  // Round so we only touch the DOM when the level visibly changes
+  const level = Math.round(base * 1000) / 1000;
+  if (level !== chaosOverlayLevel) {
+    chaosOverlayLevel = level;
+    document.body.style.setProperty("--chaos-level", level);
+  }
+}
+
+// Big centered chaos readout (title / targets remaining / key hints).
+// Only the live parts are written, and only when they change.
+let lastChaosStatus = null;
+let lastChaosAuto = null;
+
+function updateChaosHud() {
+  if (!gameState.catMode) return;
+  const statusEl = document.getElementById("chaos-status");
+  if (statusEl) {
+    const remaining = chaosRemaining();
+    const txt =
+      remaining === 0
+        ? "[ NOTHING REMAINS. ONLY THE CAT. ]"
+        : "[ TARGETS REMAINING: " + remaining + " ]";
+    if (txt !== lastChaosStatus) {
+      lastChaosStatus = txt;
+      statusEl.textContent = txt;
+    }
+  }
+  const autoEl = document.getElementById("chaos-autofire");
+  if (autoEl) {
+    const txt = gameState.autoFire ? "[ON]" : "[OFF]";
+    if (txt !== lastChaosAuto) {
+      lastChaosAuto = txt;
+      autoEl.textContent = txt;
+    }
+  }
+}
+
 function updateHUD() {
+  updateChaosOverlay();
+  updateChaosHud();
   let hudElement = document.getElementById("nearest-link");
 
   if (gameState.catMode) {
     const remaining = chaosRemaining();
     let chaosHtml =
       '<div style="color: #ff5555; font-weight: bold; font-size: 15px;">🔥 CAT CHAOS ENGAGED</div>' +
-      '<div style="color: #888; font-size: 11px; margin-top: 4px;">SPACE = fire · C = toggle (debug)</div>' +
+      '<div style="color: #888; font-size: 11px; margin-top: 4px;">SPACE = fire · F = auto ' +
+      (gameState.autoFire ? "ON" : "OFF") +
+      " · C = toggle (debug)</div>" +
       '<div class="distance">Targets remaining: ' +
       remaining +
       "</div>";

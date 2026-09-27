@@ -95,7 +95,40 @@ const GAME_CONFIG = {
     screenShake: 7,
     explosionParticles: 34,
     shardLifespan: 45,
+    // Destroyed-link title letters
+    titleShardLifespan: 70,
+    // Puffs in the gas cloud left by a destroyed nebula
+    gasPuffs: 12,
+    fireRate: 6, // frames between shots while holding SPACE / auto-firing
+    // Cat mode flies frantic: multiply movement speed and spew more exhaust
+    moveSpeedMultiplier: 2.5,
+    thrusterMultiplier: 2.5,
+    // Cascade detonations: a blast can ignite nearby objects
+    cascadeChance: 0.3,
+    cascadeRadius: 170,
+    cascadeMaxDepth: 3,
+    // Big kills (planet/link) shove nearby objects away
+    bigShockRadius: 320,
+    bigShockStrength: 12,
+    // Persistent tumbling wreckage left by big kills
+    wreckagePieces: 8,
+    wreckageLifespan: 300,
     autoFire: false, // debug helper: fire continuously when on
+    // Red glimmer overlay intensity at 0% and 100% destruction progress
+    overlayIntensityMin: 0.22,
+    overlayIntensityMax: 0.72,
+    // Dimmed overlay once only the cat remains
+    overlayVoidIntensity: 0.14,
+    // Endless ambient screen shake (pixels) at 100% destruction progress
+    ambientShakeMax: 3.5,
+    // On-screen target guidance while hunting (cat orbiting arrow + edge chevrons)
+    markers: {
+      screenMargin: 40, // objects within this margin of the viewport read as on-screen
+      orbitRadius: 82, // radius of the arrow orbiting the cat head
+      arrowSize: 11, // chevron/arrow size in pixels
+      edgeMarkers: 4, // max off-screen targets shown on the viewport edge
+      edgeInset: 28, // distance of edge chevrons from the viewport border
+    },
   },
   minimap: {
     size: 120,

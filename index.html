@@ -33,6 +33,18 @@
       </div>
     </div>
 
+    <!-- Cat Chaos HUD: replaces the explorer HUD while chaos is active -->
+    <div id="chaos-hud" aria-hidden="true">
+      <div id="chaos-title">🔥 CAT CHAOS MODE 🔥</div>
+      <div id="chaos-status">[ TARGETS REMAINING: 0 ]</div>
+      <div id="chaos-keys">
+        <span class="key">SPACE</span> Fire ·
+        <span class="key">F</span> Auto-Fire
+        <span id="chaos-autofire">[OFF]</span> ·
+        <span class="key">C</span> Exit
+      </div>
+    </div>
+
     <!-- Info / how-to-play overlay (toggled with I) -->
     <div
       id="start-menu"
@@ -123,6 +135,9 @@
         </div>
       </div>
     </div>
+
+    <!-- Cat Chaos red glimmer overlay, pure visual (toggled by game state) -->
+    <div id="chaos-overlay"></div>
 
     <!-- CRT/scanline overlay, pure visual (toggled via GAME_CONFIG.visual) -->
     <div id="crt-overlay"></div>
