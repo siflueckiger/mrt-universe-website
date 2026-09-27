@@ -361,6 +361,11 @@ function draw() {
   // Mini-map of the world
   drawMinimap();
 
+  // Chaos wrath drone swells with destruction progress (silent outside cat mode)
+  if (typeof setChaosDrone === "function") {
+    setChaosDrone(gameState.catMode ? chaosProgress() : 0);
+  }
+
   // Handle input
   handleInput();
 
@@ -585,7 +590,6 @@ function collectTrash(i) {
   // Collected everything: CAT CHAOS MODE!
   if (trashCollected >= GAME_CONFIG.counts.trash && !gameState.catMode) {
     setCatMode(true);
-    playSound("chaos");
     gameState.screenShakeFrames = GAME_CONFIG.catMode.screenShake;
   }
 }
@@ -777,11 +781,16 @@ function drawShipPrompt() {
 
 function setCatMode(on) {
   gameState.catMode = !!on;
-  if (!gameState.catMode) {
+  if (gameState.catMode) {
+    // Awakening fanfare + aggressive roar
+    playSound("chaos");
+    playSound("roar");
+  } else {
     gameState.laserTarget = null;
     gameState.laserFrames = 0;
     gameState.fireCooldown = 0;
     gameState.catAngle = 0;
+    if (typeof stopChaosDrone === "function") stopChaosDrone();
   }
 }
 
@@ -925,6 +934,7 @@ function igniteCascade(x, y, depth) {
   for (let t of nearby) {
     if (random() < GAME_CONFIG.catMode.cascadeChance) {
       createExplosion(t.obj.x, t.obj.y, t.kind, t.obj);
+      playSound("explosion");
       destroyTarget(t);
       igniteCascade(t.obj.x, t.obj.y, depth + 1);
     }
@@ -1001,7 +1011,13 @@ function fireCatLaser() {
 
   gameState.laserTarget = { x: target.obj.x, y: target.obj.y };
   createExplosion(target.obj.x, target.obj.y, target.kind, target.obj);
-  playSound("explosion");
+  const destroySound = {
+    star: "star",
+    planet: "planet",
+    nebula: "nebula",
+    link: "linkPop",
+  };
+  playSound(destroySound[target.kind] || "explosion");
   const hx = target.obj.x;
   const hy = target.obj.y;
   destroyTarget(target);

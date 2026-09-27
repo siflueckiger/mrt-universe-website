@@ -97,6 +97,40 @@ function playSound(name) {
         blip(1047, 1047, 0.32, "square", 1);
       }, 300);
       break;
+    case "roar":
+      // Aggressive cat stinger the moment chaos awakens
+      blip(320, 70, 0.6, "sawtooth", 1);
+      blip(140, 40, 0.8, "triangle", 0.9);
+      setTimeout(function () {
+        blip(600, 120, 0.35, "square", 0.5);
+      }, 60);
+      break;
+    case "star":
+      // Crystalline sparkle for a supernova
+      blip(1600, 2200, 0.08, "sine", 0.8);
+      setTimeout(function () {
+        blip(2400, 2600, 0.1, "sine", 0.6);
+      }, 50);
+      break;
+    case "planet":
+      // Deep crushing boom
+      blip(90, 24, 0.5, "triangle", 1);
+      blip(220, 50, 0.3, "sawtooth", 0.5);
+      break;
+    case "nebula":
+      // Spatial whoosh as gas dissipates
+      blip(300, 900, 0.4, "sine", 0.5);
+      setTimeout(function () {
+        blip(800, 200, 0.5, "sine", 0.4);
+      }, 120);
+      break;
+    case "linkPop":
+      // Digital shatter for a destroyed link
+      blip(1200, 300, 0.16, "square", 0.8);
+      setTimeout(function () {
+        blip(900, 200, 0.14, "square", 0.6);
+      }, 60);
+      break;
   }
 }
 
@@ -133,12 +167,67 @@ function stopFlySound() {
   }, 250);
 }
 
+// ==================== CAT CHAOS DRONE ====================
+// A droning "wrath" pad that swells as more of the universe is destroyed.
+// Lazy-started/stopped so mute, tab-blur and rebirth all silence it.
+
+let chaosDrone = null;
+let lastChaosLevel = -1;
+
+function startChaosDrone() {
+  if (chaosDrone) return;
+  if (!GAME_CONFIG.sound.enabled || !audioReady || soundMuted) return;
+  if (typeof p5 === "undefined" || typeof p5.Oscillator === "undefined") return;
+  chaosDrone = [
+    new p5.Oscillator(55, "sawtooth"),
+    new p5.Oscillator(82.5, "sawtooth"),
+    new p5.Oscillator(110, "triangle"),
+  ];
+  for (let o of chaosDrone) {
+    o.amp(0);
+    o.start();
+  }
+}
+
+function stopChaosDrone() {
+  if (!chaosDrone) return;
+  const oscs = chaosDrone;
+  chaosDrone = null;
+  lastChaosLevel = -1;
+  for (let o of oscs) {
+    o.amp(0, 0.3);
+  }
+  setTimeout(function () {
+    for (let o of oscs) {
+      o.dispose();
+    }
+  }, 400);
+}
+
+// level 0..1 — safe to call every frame; only touches oscillators on change
+function setChaosDrone(level) {
+  if (!GAME_CONFIG.sound.enabled || !audioReady || soundMuted) {
+    stopChaosDrone();
+    return;
+  }
+  const l = constrain(level || 0, 0, 1);
+  if (Math.abs(l - lastChaosLevel) < 0.03) return;
+  lastChaosLevel = l;
+  if (!chaosDrone) startChaosDrone();
+  if (!chaosDrone) return;
+  const base = GAME_CONFIG.sound.volume;
+  chaosDrone[0].amp(base * (0.15 + 0.5 * l), 0.15);
+  chaosDrone[1].amp(base * (0.1 + 0.4 * l), 0.15);
+  chaosDrone[2].amp(base * (0.08 + 0.3 * l), 0.15);
+}
+
 function toggleSound() {
   soundMuted = !soundMuted;
   try {
     if (soundMuted) {
       playSound("deselect");
       stopFlySound();
+      stopChaosDrone();
     } else {
       playSound("select");
     }
@@ -181,5 +270,8 @@ function initSoundButton() {
   updateSoundButton();
 }
 
-// Stop the hum when the tab loses focus so it doesn't drone in the background
-window.addEventListener("blur", stopFlySound);
+// Stop sustained sounds when the tab loses focus so they don't drone on
+window.addEventListener("blur", function () {
+  stopFlySound();
+  stopChaosDrone();
+});
