@@ -19,6 +19,11 @@
       integrity="sha384-Ozi5ax1b+B/XBCzskytbAcQlgO0fcBp6gBOgS1SNQgR55vMk33RdVPAAAvB/8kA6"
       crossorigin="anonymous"
     ></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"
+      integrity="sha384-/TQbtLCAerC3jgaim+N78RZSDYV7ryeoBCVqTuzRrFec2akfBkHS7ACQ3PQhvMVi"
+      crossorigin="anonymous"
+    ></script>
   </head>
   <body>
     <div id="hud">
@@ -69,6 +74,11 @@
             when you're close to one.
           </li>
           <li>
+            <strong>ENTER</strong> opens an installation's info screen — press
+            <strong>ESC</strong> to go back or <strong>ENTER</strong> again to
+            open its link.
+          </li>
+          <li>
             <strong>L</strong> or the <strong>LINKS BUTTON</strong> opens the
             link list to pin any destination.
           </li>
@@ -104,7 +114,7 @@
 
     <div id="controls">
       ← → ↑ ↓ / WASD Move<br />
-      <span style="color: #00ffff">ENTER/SPACE</span> = Open link<br />
+      <span style="color: #00ffff">ENTER/SPACE</span> = Open / View info<br />
       <span style="color: #00ffff">V</span> = Preview video · <span style="color: #00ffff">J</span> = Warp
     </div>
 
@@ -117,8 +127,9 @@
       <div id="action-button" class="inactive" role="button" aria-label="Open link">⏎</div>
     </div>
 
-    <!-- In-game YouTube preview modal (V key near a link) -->
-    <div id="preview-modal" role="dialog" aria-modal="true" aria-label="Video preview">
+    <!-- In-game preview modal: V previews a YouTube link, ENTER opens an
+         installation's rendered markdown (ESC back · ENTER open link) -->
+    <div id="preview-modal" role="dialog" aria-modal="true" aria-label="Preview">
       <div class="preview-window">
         <div class="preview-titlebar">
           <span id="preview-title">Preview</span>
@@ -131,7 +142,16 @@
             allow="autoplay; encrypted-media; picture-in-picture"
             allowfullscreen
           ></iframe>
+          <div id="preview-markdown" class="preview-markdown" tabindex="0"></div>
           <div id="preview-fallback" class="preview-fallback"></div>
+        </div>
+        <div id="preview-footer" class="preview-footer">
+          <span class="preview-footer-hint" id="preview-footer-hint"
+            ><span class="key">ESC</span> Back · <span class="key">ENTER</span> Open link</span
+          >
+          <button type="button" class="preview-open-tab" id="preview-open-tab">
+            Open in new tab ↗
+          </button>
         </div>
       </div>
     </div>

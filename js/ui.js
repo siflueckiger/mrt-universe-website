@@ -265,13 +265,14 @@ function updateHUD() {
   }
 }
 
-// ==================== VIDEO PREVIEW MODAL ====================
-// V near a link embeds a YouTube player right inside the CRT screen.
-// Non-embeddable links (e.g. Flickr) fall back to an "open in new tab"
-// button. Closing clears the iframe src so playback/audio stops.
+// ==================== PREVIEW MODAL ====================
+// V near a YouTube link embeds the player right inside the CRT screen.
+// ENTER (or V) near an installation renders its markdown body in the same
+// window (ESC back, ENTER opens the external link). Other links fall back
+// to an "open in new tab" prompt.
 
 let previewOpen = false;
-// Link currently shown in the modal (so ENTER/the fallback button can open it)
+// Link currently shown in the modal (so ENTER/the button can open it)
 let previewLink = null;
 
 // Extract a YouTube video id from watch / youtu.be / embed / shorts URLs
@@ -290,13 +291,142 @@ function getYouTubeId(url) {
   return null;
 }
 
+// An installation is anything flagged by category or carrying a markdown body
+function isInstallationLink(link) {
+  if (!link || !link.data) return false;
+  return (
+    link.data.category === "Installation" ||
+    typeof link.data.markdown === "string"
+  );
+}
+
+// Custom markdown body, or a generated template so every installation has one
+function getInstallationMarkdown(link) {
+  const data = (link && link.data) || {};
+  if (typeof data.markdown === "string" && data.markdown.trim() !== "") {
+    return data.markdown;
+  }
+  let md = "# " + (data.title || "Installation") + "\n\n";
+  if (data.description) md += data.description + "\n\n";
+  if (data.category) md += "**Category:** " + data.category + "\n\n";
+  if (data.url) md += "[Open the original link](" + data.url + ")\n";
+  return md;
+}
+
+// Inline markdown (already HTML-escaped input): code, links, bold, italic
+function inlineMarkdown(text) {
+  let s = escapeHtml(text);
+  s = s.replace(/`([^`]+)`/g, "<code>$1</code>");
+  s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, function (_match, label, url) {
+    return '<a href="' + url + '">' + label + "</a>";
+  });
+  s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  s = s.replace(/\*([^*]+)\*/g, "<em>$1</em>");
+  return s;
+}
+
+// Minimal offline-safe markdown parser used when the marked CDN is missing
+function fallbackMarkdown(src) {
+  const lines = String(src).replace(/\r\n?/g, "\n").split("\n");
+  let html = "";
+  let listOpen = false;
+  let para = [];
+  function closeList() {
+    if (listOpen) {
+      html += "</ul>";
+      listOpen = false;
+    }
+  }
+  function flushPara() {
+    if (para.length) {
+      html += "<p>" + para.map(inlineMarkdown).join("<br>") + "</p>";
+      para = [];
+    }
+  }
+  lines.forEach(function (line) {
+    const t = line.trim();
+    if (t === "") {
+      flushPara();
+      closeList();
+      return;
+    }
+    let m = t.match(/^(#{1,6})\s+(.*)$/);
+    if (m) {
+      flushPara();
+      closeList();
+      const level = m[1].length;
+      html += "<h" + level + ">" + inlineMarkdown(m[2]) + "</h" + level + ">";
+      return;
+    }
+    if (/^(-{3,}|\*{3,}|_{3,})$/.test(t)) {
+      flushPara();
+      closeList();
+      html += "<hr>";
+      return;
+    }
+    m = t.match(/^>\s?(.*)$/);
+    if (m) {
+      flushPara();
+      closeList();
+      html += "<blockquote>" + inlineMarkdown(m[1]) + "</blockquote>";
+      return;
+    }
+    m = t.match(/^[-*]\s+(.*)$/);
+    if (m) {
+      flushPara();
+      if (!listOpen) {
+        html += "<ul>";
+        listOpen = true;
+      }
+      html += "<li>" + inlineMarkdown(m[1]) + "</li>";
+      return;
+    }
+    flushPara();
+    para.push(t);
+  });
+  flushPara();
+  closeList();
+  return html;
+}
+
+// Markdown -> HTML. Prefers marked (CDN), falls back to the tiny parser.
+// Every link is forced to open in a new tab.
+function renderMarkdown(src) {
+  let html = null;
+  if (
+    typeof marked !== "undefined" &&
+    marked &&
+    typeof marked.parse === "function"
+  ) {
+    try {
+      html = marked.parse(String(src == null ? "" : src));
+    } catch (err) {
+      html = null;
+    }
+  }
+  if (html == null) html = fallbackMarkdown(src);
+  return html.replace(/<a\s/gi, '<a target="_blank" rel="noopener" ');
+}
+
+// Show/hide the modal's video, markdown or fallback pane via a data-mode flag
+function setPreviewMode(mode) {
+  const overlay = document.getElementById("preview-modal");
+  if (overlay) overlay.dataset.mode = mode;
+}
+
+function setPreviewFooterHint(html) {
+  const hint = document.getElementById("preview-footer-hint");
+  if (hint) hint.innerHTML = html;
+}
+
 function openPreview(link) {
   if (!link || previewOpen) return;
   const overlay = document.getElementById("preview-modal");
   const frame = document.getElementById("preview-frame");
   const title = document.getElementById("preview-title");
+  const markdown = document.getElementById("preview-markdown");
   const fallback = document.getElementById("preview-fallback");
-  if (!overlay || !frame || !fallback) return;
+  if (!overlay || !frame || !markdown || !fallback) return;
 
   // Never preview mid-warp
   if (typeof endWarp === "function" && gameState.warpActive) endWarp(true);
@@ -304,27 +434,36 @@ function openPreview(link) {
   previewOpen = true;
   previewLink = link;
   if (title) title.textContent = link.data.title || "Preview";
+  // Tear down any previous video before switching panes
+  frame.removeAttribute("src");
 
   const videoId = getYouTubeId(link.data.url);
   if (videoId) {
-    frame.style.display = "block";
-    fallback.style.display = "none";
+    setPreviewMode("video");
     frame.src =
       "https://www.youtube-nocookie.com/embed/" +
       videoId +
       "?autoplay=1&rel=0";
+  } else if (isInstallationLink(link)) {
+    setPreviewMode("markdown");
+    markdown.innerHTML = renderMarkdown(getInstallationMarkdown(link));
+    try {
+      markdown.scrollTop = 0;
+      markdown.focus();
+    } catch (err) {
+      /* focus is best-effort */
+    }
+    setPreviewFooterHint(
+      '<span class="key">ESC</span> Back · <span class="key">ENTER</span> Open link'
+    );
   } else {
     // Can't embed — offer a new-tab fallback instead of a blank frame
-    frame.removeAttribute("src");
-    frame.style.display = "none";
-    fallback.style.display = "flex";
+    setPreviewMode("fallback");
     fallback.innerHTML =
-      '<div>This link can\'t be previewed in-game.<br>Press ENTER to open it in a new tab.</div>' +
-      '<button type="button" class="preview-open-tab" id="preview-open-tab">Open in new tab</button>';
-    const openTab = document.getElementById("preview-open-tab");
-    if (openTab) {
-      openTab.addEventListener("click", openPreviewLinkInTab);
-    }
+      '<div>This link can\'t be previewed in-game.<br>Press ENTER to open it in a new tab.</div>';
+    setPreviewFooterHint(
+      '<span class="key">ESC</span> Back · <span class="key">ENTER</span> Open link'
+    );
   }
 
   overlay.style.display = "flex";
@@ -336,6 +475,7 @@ function openPreview(link) {
 function openPreviewLinkInTab() {
   if (!previewLink) return;
   window.open(previewLink.data.url, "_blank", "noopener");
+  if (typeof markVisited === "function") markVisited(previewLink);
   closePreview();
 }
 
@@ -343,11 +483,16 @@ function closePreview() {
   if (!previewOpen) return;
   const overlay = document.getElementById("preview-modal");
   const frame = document.getElementById("preview-frame");
+  const markdown = document.getElementById("preview-markdown");
   previewOpen = false;
   previewLink = null;
   // Clearing src tears down the player so audio stops immediately
   if (frame) frame.removeAttribute("src");
-  if (overlay) overlay.style.display = "none";
+  if (markdown) markdown.innerHTML = "";
+  if (overlay) {
+    overlay.style.display = "none";
+    overlay.removeAttribute("data-mode");
+  }
   document.body.classList.remove("preview-open");
   playSound("deselect");
 }
@@ -355,8 +500,10 @@ function closePreview() {
 function initPreviewModal() {
   const overlay = document.getElementById("preview-modal");
   const closeBtn = document.getElementById("preview-close");
+  const openBtn = document.getElementById("preview-open-tab");
   if (!overlay) return;
   if (closeBtn) closeBtn.addEventListener("click", closePreview);
+  if (openBtn) openBtn.addEventListener("click", openPreviewLinkInTab);
   // Click on the dimmed backdrop closes the modal
   overlay.addEventListener("click", function (e) {
     if (e.target === overlay) closePreview();

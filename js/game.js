@@ -782,6 +782,7 @@ function drawShipPrompt() {
 
   const cfg = GAME_CONFIG.prompt;
   const canPreview = !!getYouTubeId(link.data.url);
+  const isInstallation = isInstallationLink(link);
   const segments = canPreview
     ? [
         ["[ENTER]", [0, 255, 0]],
@@ -789,6 +790,11 @@ function drawShipPrompt() {
         ["  ", [0, 0, 0]],
         ["[V]", [0, 255, 0]],
         [" Preview", [230, 240, 250]],
+      ]
+    : isInstallation
+    ? [
+        ["[ENTER]", [0, 255, 0]],
+        [" View", [230, 240, 250]],
       ]
     : [
         ["[ENTER]", [0, 255, 0]],
@@ -1291,12 +1297,16 @@ function toggleAutoFire() {
 function keyPressed(e) {
   if (!gameState.appReady) return; // ignore keys until the game is ready
   // While the preview modal is open, ENTER opens the link in a new tab;
-  // ESC or V closes it. All other keys ignored.
+  // ESC or V closes it. Other keys fall through so arrow/space/page keys
+  // can scroll the markdown reader.
   if (previewOpen) {
     if (key === "Escape" || key === "v" || key === "V") {
       closePreview();
-    } else if (key === "Enter" || key === " ") {
+      return;
+    }
+    if (key === "Enter") {
       openPreviewLinkInTab();
+      return;
     }
     return;
   }
@@ -1396,6 +1406,14 @@ function tryOpenLink(link) {
   if (!link) return;
   let d = link.getDistance(ship.x, ship.y);
   if (d < GAME_CONFIG.activationDistance) {
+    // Installations open their in-game markdown reader first; the external
+    // link is then opened from inside the modal (ENTER / the footer button).
+    if (isInstallationLink(link)) {
+      openPreview(link);
+      gameState.accelerationFactor = 0;
+      gameState.selectedLinkIndex = null;
+      return;
+    }
     window.open(link.data.url, "_blank", "noopener");
     // reset acceleration when a link is reached/opened
     gameState.accelerationFactor = 0;
