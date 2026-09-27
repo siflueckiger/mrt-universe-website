@@ -68,3 +68,13 @@ Ideas to crank **Cat Chaos Mode** up to eleven. Roughly ordered by bang-for-buck
   the usual "new / visited" legend.
 - New knobs in `GAME_CONFIG.minimap` (dot sizes / colors per kind), gated on
   `gameState.catMode`.
+
+### Decisions (implemented)
+
+- **No stars** on the minimap: they are screen-space dust, not world objects, so plotting
+  them would only add noise.
+- **No legend** in chaos mode — the minimap stays clean; only the normal `new / visited`
+  legend remains outside chaos.
+- Colors: link hot-pink (pulsing), planet amber, asteroid gray, nebula violet, trash cyan,
+  ship white. Chaos frame is dark crimson with a red border.
+
