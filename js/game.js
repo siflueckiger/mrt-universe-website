@@ -530,9 +530,15 @@ function handleInput() {
       );
     }
 
-    // Compute move speeds including acceleration
+    // Compute move speeds including acceleration. Cat mode is frantic:
+    // everything is faster and the world whips past.
+    const catSpeed = gameState.catMode
+      ? GAME_CONFIG.catMode.moveSpeedMultiplier
+      : 1;
     let moveSpeed =
-      GAME_CONFIG.movement.baseSpeed * (1 + gameState.accelerationFactor);
+      GAME_CONFIG.movement.baseSpeed *
+      (1 + gameState.accelerationFactor) *
+      catSpeed;
 
     // Keyboard movement (arrows or WASD; preserve original sign convention)
     let movedX = 0;
@@ -557,7 +563,7 @@ function handleInput() {
     // Joystick controls (scaled and affected by acceleration)
     if (joystick.active) {
       let speedMultiplier =
-        GAME_CONFIG.joystick.speedScale * (1 + gameState.accelerationFactor);
+        GAME_CONFIG.joystick.speedScale * (1 + gameState.accelerationFactor) * catSpeed;
       if (Math.abs(joystick.deltaX) > GAME_CONFIG.joystick.deadzone) {
         let amt = -joystick.deltaX * speedMultiplier;
         moveObjects("x", amt);
@@ -571,16 +577,24 @@ function handleInput() {
     }
 
     // Spawn thruster particles opposite of movement direction
-    if ((movedX !== 0 || movedY !== 0) && particles.length < GAME_CONFIG.particles.maxCount) {
+    if (movedX !== 0 || movedY !== 0) {
       let angle = Math.atan2(movedY, movedX);
-      // Particle shoots opposite the world movement vector
-      let pSpeed = random(1.5, 3.5);
-      let pvx = Math.cos(angle) * pSpeed;
-      let pvy = Math.sin(angle) * pSpeed;
-      // UFO underside emitter position
-      let emitX = ship.x + random(-8, 8);
-      let emitY = ship.y + 10 + random(-2, 4);
-      particles.push(new ThrusterParticle(emitX, emitY, pvx, pvy));
+      // Cat mode spews far more exhaust for that frantic "AAAAA" feel
+      const thrusterMult = gameState.catMode
+        ? GAME_CONFIG.catMode.thrusterMultiplier
+        : 1;
+      const emitCount = Math.round(thrusterMult);
+      for (let k = 0; k < emitCount; k++) {
+        if (particles.length >= GAME_CONFIG.particles.maxCount) break;
+        // Particle shoots opposite the world movement vector
+        let pSpeed = random(1.5, 3.5) * catSpeed;
+        let pvx = Math.cos(angle) * pSpeed;
+        let pvy = Math.sin(angle) * pSpeed;
+        // UFO underside emitter position
+        let emitX = ship.x + random(-8, 8);
+        let emitY = ship.y + 10 + random(-2, 4);
+        particles.push(new ThrusterParticle(emitX, emitY, pvx, pvy));
+      }
     }
   }
 

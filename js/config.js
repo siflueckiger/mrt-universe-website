@@ -100,6 +100,9 @@ const GAME_CONFIG = {
     // Puffs in the gas cloud left by a destroyed nebula
     gasPuffs: 12,
     fireRate: 6, // frames between shots while holding SPACE / auto-firing
+    // Cat mode flies frantic: multiply movement speed and spew more exhaust
+    moveSpeedMultiplier: 2.5,
+    thrusterMultiplier: 2.5,
     // Cascade detonations: a blast can ignite nearby objects
     cascadeChance: 0.3,
     cascadeRadius: 170,
