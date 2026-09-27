@@ -95,6 +95,10 @@ const GAME_CONFIG = {
     screenShake: 7,
     explosionParticles: 34,
     shardLifespan: 45,
+    // Destroyed-link title letters
+    titleShardLifespan: 70,
+    // Puffs in the gas cloud left by a destroyed nebula
+    gasPuffs: 12,
     autoFire: false, // debug helper: fire continuously when on
     // Red glimmer overlay intensity at 0% and 100% destruction progress
     overlayIntensityMin: 0.22,

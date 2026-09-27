@@ -578,12 +578,13 @@ class ExplosionShard {
 }
 
 class Shockwave {
-  constructor(x, y) {
+  constructor(x, y, color, scale) {
     this.x = x;
     this.y = y;
     this.r = 4;
-    this.maxR = random(60, 120);
+    this.maxR = random(60, 120) * (scale || 1);
     this.life = 1;
+    this.color = color || [120, 220, 255];
   }
 
   update() {
@@ -599,10 +600,141 @@ class Shockwave {
     push();
     noFill();
     strokeWeight(3 * this.life + 1);
-    stroke(120, 220, 255, 200 * this.life);
+    stroke(this.color[0], this.color[1], this.color[2], 200 * this.life);
     ellipse(this.x, this.y, this.r * 2);
     stroke(255, 180, 80, 150 * this.life);
     ellipse(this.x, this.y, this.r * 1.5);
+    pop();
+  }
+}
+
+// Bright additive core flash for supernovae (destroyed stars)
+class SupernovaFlash {
+  constructor(x, y, color) {
+    this.x = x;
+    this.y = y;
+    this.r = 6;
+    this.maxR = random(80, 140);
+    this.life = 1;
+    this.color = color || [255, 255, 240];
+  }
+
+  update() {
+    this.r += (this.maxR - this.r) * 0.34;
+    this.life -= 0.07;
+  }
+
+  isDead() {
+    return this.life <= 0;
+  }
+
+  display() {
+    push();
+    noStroke();
+    blendMode(ADD);
+    fill(this.color[0], this.color[1], this.color[2], 220 * this.life);
+    ellipse(this.x, this.y, this.r * 2);
+    fill(255, 255, 255, 180 * this.life);
+    ellipse(this.x, this.y, this.r * 0.9);
+    blendMode(BLEND);
+    pop();
+  }
+}
+
+// Dissipating gas cloud left behind by a destroyed nebula
+class GasBurst {
+  constructor(x, y, hue, size) {
+    this.x = x;
+    this.y = y;
+    this.hue = hue == null ? random([260, 290, 320, 180, 200]) : hue;
+    this.life = 1;
+    this.puffs = [];
+    const base = size ? size * 0.28 : 70;
+    const count = GAME_CONFIG.catMode.gasPuffs;
+    for (let i = 0; i < count; i++) {
+      const a = random(TWO_PI);
+      const d = random(base * 0.2, base);
+      this.puffs.push({
+        x: x + cos(a) * d,
+        y: y + sin(a) * d,
+        vx: cos(a) * random(0.4, 1.1),
+        vy: sin(a) * random(0.4, 1.1),
+        r: random(base * 0.4, base * 0.95),
+        hueOffset: random(-25, 25),
+      });
+    }
+  }
+
+  update() {
+    for (let p of this.puffs) {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.r += 0.7;
+      p.vx *= 0.99;
+      p.vy *= 0.99;
+    }
+    this.life -= 0.012;
+  }
+
+  isDead() {
+    return this.life <= 0;
+  }
+
+  display() {
+    push();
+    colorMode(HSB);
+    blendMode(SCREEN);
+    noStroke();
+    for (let p of this.puffs) {
+      fill((this.hue + p.hueOffset + 360) % 360, 80, 70, 70 * this.life);
+      ellipse(p.x, p.y, p.r);
+    }
+    colorMode(RGB);
+    blendMode(BLEND);
+    pop();
+  }
+}
+
+// A single letter flung out when a link is destroyed ("...popped")
+class TextShard {
+  constructor(x, y, ch, color) {
+    this.x = x;
+    this.y = y;
+    this.ch = ch;
+    this.vx = random(-1, 1);
+    this.vy = random(-1, 1);
+    this.maxLife = GAME_CONFIG.catMode.titleShardLifespan;
+    this.life = this.maxLife;
+    this.rot = 0;
+    this.rotSpeed = random(-0.25, 0.25);
+    this.size = random(14, 22);
+    this.color = color || [255, 255, 255];
+  }
+
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vy += 0.03; // gentle gravity
+    this.vx *= 0.99;
+    this.rot += this.rotSpeed;
+    this.life--;
+  }
+
+  isDead() {
+    return this.life <= 0;
+  }
+
+  display() {
+    push();
+    translate(this.x, this.y);
+    rotate(this.rot);
+    textAlign(CENTER, CENTER);
+    textSize(this.size);
+    const a = map(this.life, 0, this.maxLife, 0, 255);
+    fill(this.color[0], this.color[1], this.color[2], a);
+    stroke(0, 0, 0, a * 0.6);
+    strokeWeight(2);
+    text(this.ch, 0, 0);
     pop();
   }
 }

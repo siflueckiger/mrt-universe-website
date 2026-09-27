@@ -793,7 +793,9 @@ function chaosProgress() {
   return constrain(1 - chaosRemaining() / total, 0, 1);
 }
 
-// Nearest destructible object that is currently on screen
+// Nearest destructible object that is currently on screen. Major bodies
+// (links/planets/asteroids) always win so the cat doesn't waste shots on
+// the starfield; nebulae -> trash -> stars are bonus targets of last resort.
 function getNearestOnScreenTarget() {
   let best = null;
   let bestDist = Infinity;
@@ -809,13 +811,70 @@ function getNearestOnScreenTarget() {
   for (let p of planets) consider(p, "planet");
   for (let a of asteroids) consider(a, "asteroid");
   for (let l of links) consider(l, "link");
+  if (best) return best;
+  for (let n of nebulae) consider(n, "nebula");
+  if (best) return best;
+  for (let t of trash) consider(t, "trash");
+  if (best) return best;
+  for (let s of stars) consider(s, "star");
   return best;
 }
 
-function createExplosion(x, y) {
-  explosions.push(new Shockwave(x, y));
-  for (let i = 0; i < GAME_CONFIG.catMode.explosionParticles; i++) {
-    explosions.push(new ExplosionShard(x, y));
+// Per-destruction color palette (shards, shockwave, flash)
+const CAT_FX_COLORS = {
+  planet: [[200, 130, 70], [255, 180, 90], [150, 100, 80], [120, 90, 70]],
+  asteroid: [[130, 120, 110], [100, 90, 80], [170, 150, 130]],
+  link: [[255, 80, 190], [90, 255, 255], [255, 220, 80], [160, 120, 255]],
+  star: [[255, 255, 255], [255, 240, 160], [180, 220, 255]],
+  nebula: [[180, 120, 255], [255, 120, 220], [120, 220, 255]],
+  trash: [[190, 220, 220], [255, 130, 130], [255, 220, 120]],
+};
+
+function createExplosion(x, y, kind, source) {
+  kind = kind || "planet";
+  const colors = CAT_FX_COLORS[kind] || CAT_FX_COLORS.planet;
+  const scale = kind === "planet" ? 1.5 : kind === "star" ? 1.2 : 1;
+  explosions.push(new Shockwave(x, y, colors[0], scale));
+
+  // Lighter objects throw fewer shards
+  let count = GAME_CONFIG.catMode.explosionParticles;
+  if (kind === "asteroid") count = Math.round(count * 0.7);
+  else if (kind === "star") count = Math.round(count * 0.55);
+  else if (kind === "nebula" || kind === "trash") {
+    count = Math.round(count * 0.4);
+  }
+  for (let i = 0; i < count; i++) {
+    explosions.push(new ExplosionShard(x, y, random(colors)));
+  }
+
+  if (kind === "star") {
+    explosions.push(new SupernovaFlash(x, y, colors[0]));
+  } else if (kind === "nebula" && source) {
+    explosions.push(new GasBurst(x, y, source.hue, source.size));
+  } else if (kind === "link" && source && source.data) {
+    spawnTitleShards(x, y, source.data.title);
+  }
+}
+
+// Scatter a destroyed link's title as spinning, fading letters
+function spawnTitleShards(x, y, title) {
+  const chars = String(title || "").split("");
+  let placed = 0;
+  const total = chars.length;
+  for (let i = 0; i < total; i++) {
+    const ch = chars[i];
+    if (ch === " ") continue;
+    const col = random(CAT_FX_COLORS.link);
+    const s = new TextShard(x, y, ch, col);
+    // Fan the letters out in reading order (-PI/2 is straight up)
+    const a =
+      map(placed, 0, Math.max(1, total - 1), -PI * 0.9, -PI * 0.1) +
+      random(-0.2, 0.2);
+    const sp = random(2.5, 5.5);
+    s.vx = Math.cos(a) * sp;
+    s.vy = Math.sin(a) * sp;
+    explosions.push(s);
+    placed++;
   }
 }
 
@@ -841,6 +900,15 @@ function destroyTarget(t) {
   } else if (t.kind === "asteroid") {
     const idx = asteroids.indexOf(t.obj);
     if (idx >= 0) asteroids.splice(idx, 1);
+  } else if (t.kind === "nebula") {
+    const idx = nebulae.indexOf(t.obj);
+    if (idx >= 0) nebulae.splice(idx, 1);
+  } else if (t.kind === "trash") {
+    const idx = trash.indexOf(t.obj);
+    if (idx >= 0) trash.splice(idx, 1);
+  } else if (t.kind === "star") {
+    const idx = stars.indexOf(t.obj);
+    if (idx >= 0) stars.splice(idx, 1);
   }
 }
 
@@ -857,7 +925,7 @@ function fireCatLaser() {
   }
 
   gameState.laserTarget = { x: target.obj.x, y: target.obj.y };
-  createExplosion(target.obj.x, target.obj.y);
+  createExplosion(target.obj.x, target.obj.y, target.kind, target.obj);
   playSound("explosion");
   destroyTarget(target);
 }
