@@ -67,6 +67,9 @@ function setup() {
   loadCatImage();
   spawnWorld();
 
+  // Warm the installation markdown cache in the background
+  preloadInstallations();
+
   // Debug: boot straight into Cat Chaos via ?chaos=1 / ?cat=1
   try {
     const params = new URLSearchParams(window.location.search);

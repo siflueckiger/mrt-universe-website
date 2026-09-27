@@ -296,21 +296,76 @@ function isInstallationLink(link) {
   if (!link || !link.data) return false;
   return (
     link.data.category === "Installation" ||
-    typeof link.data.markdown === "string"
+    typeof link.data.markdown === "string" ||
+    typeof link.data.markdownFile === "string"
   );
 }
 
-// Custom markdown body, or a generated template so every installation has one
-function getInstallationMarkdown(link) {
+// "Play w/ your World" -> "play-w-your-world" (for the default .md filename)
+function slugifyTitle(title) {
+  return String(title || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+// Where an installation's markdown lives: explicit markdownFile, else a
+// title-derived path inside installations/
+function getInstallationFilePath(link) {
   const data = (link && link.data) || {};
-  if (typeof data.markdown === "string" && data.markdown.trim() !== "") {
-    return data.markdown;
+  if (typeof data.markdownFile === "string" && data.markdownFile.trim() !== "") {
+    return data.markdownFile;
   }
+  return "installations/" + slugifyTitle(data.title) + ".md";
+}
+
+// Generated template so every installation has readable content even
+// without a markdown file
+function buildInstallationTemplate(link) {
+  const data = (link && link.data) || {};
   let md = "# " + (data.title || "Installation") + "\n\n";
   if (data.description) md += data.description + "\n\n";
   if (data.category) md += "**Category:** " + data.category + "\n\n";
   if (data.url) md += "[Open the original link](" + data.url + ")\n";
   return md;
+}
+
+// Path -> fetched text, so re-opening an installation is instant
+const installationMarkdownCache = {};
+
+// Resolve an installation's markdown: an inline body wins, else the .md
+// file (fetched once and cached). Rejects when the file can't be read.
+function loadInstallationMarkdown(link) {
+  const data = (link && link.data) || {};
+  if (typeof data.markdown === "string" && data.markdown.trim() !== "") {
+    return Promise.resolve(data.markdown);
+  }
+  const path = getInstallationFilePath(link);
+  if (Object.prototype.hasOwnProperty.call(installationMarkdownCache, path)) {
+    return Promise.resolve(installationMarkdownCache[path]);
+  }
+  if (typeof fetch !== "function") {
+    return Promise.reject(new Error("fetch unavailable"));
+  }
+  return fetch(path, { cache: "no-cache" }).then(function (res) {
+    if (!res || !res.ok) throw new Error("HTTP " + (res && res.status));
+    return res.text();
+  }).then(function (text) {
+    installationMarkdownCache[path] = text;
+    return text;
+  });
+}
+
+// Best-effort background warm-up of every installation's markdown file
+function preloadInstallations() {
+  if (typeof links === "undefined" || !links) return;
+  links.forEach(function (link) {
+    if (isInstallationLink(link)) {
+      loadInstallationMarkdown(link).catch(function () {
+        /* handled lazily when the reader is actually opened */
+      });
+    }
+  });
 }
 
 // Inline markdown (already HTML-escaped input): code, links, bold, italic
@@ -446,13 +501,7 @@ function openPreview(link) {
       "?autoplay=1&rel=0";
   } else if (isInstallationLink(link)) {
     setPreviewMode("markdown");
-    markdown.innerHTML = renderMarkdown(getInstallationMarkdown(link));
-    try {
-      markdown.scrollTop = 0;
-      markdown.focus();
-    } catch (err) {
-      /* focus is best-effort */
-    }
+    openInstallationReader(link);
     setPreviewFooterHint(
       '<span class="key">ESC</span> Back · <span class="key">ENTER</span> Open link'
     );
@@ -469,6 +518,51 @@ function openPreview(link) {
   overlay.style.display = "flex";
   document.body.classList.add("preview-open");
   playSound("select");
+}
+
+// Fill the reader pane: cached/inline markdown immediately, otherwise fetch
+// the .md file behind a terminal-style loading state. Any failure degrades
+// to a generated template plus a notice.
+function openInstallationReader(link) {
+  const markdown = document.getElementById("preview-markdown");
+  if (!markdown) return;
+  markdown.innerHTML =
+    '<div class="preview-loading">[ Loading terminal log... ]</div>';
+  try {
+    markdown.scrollTop = 0;
+    markdown.focus();
+  } catch (err) {
+    /* focus is best-effort */
+  }
+
+  // Ignore the result if the modal closed or moved on to another link
+  function stillCurrent() {
+    return previewOpen && previewLink === link;
+  }
+
+  loadInstallationMarkdown(link).then(
+    function (text) {
+      if (!stillCurrent()) return;
+      markdown.innerHTML = renderMarkdown(text);
+      markdown.scrollTop = 0;
+    },
+    function () {
+      if (!stillCurrent()) return;
+      const path = getInstallationFilePath(link);
+      const notice =
+        '<div class="preview-notice">Could not load <code>' +
+        escapeHtml(path) +
+        "</code>." +
+        (window.location && window.location.protocol === "file:"
+          ? " You opened this page directly — run a local server (e.g. " +
+            "<code>python3 -m http.server</code>) so the browser may read it."
+          : "") +
+        "</div>";
+      markdown.innerHTML =
+        notice + renderMarkdown(buildInstallationTemplate(link));
+      markdown.scrollTop = 0;
+    }
+  );
 }
 
 // Open the previewed link in a browser tab, then close the modal

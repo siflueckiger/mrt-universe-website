@@ -1,8 +1,10 @@
 // ==================== LINK DATA ====================
 // Adding a link = adding an entry to this array.
-// An optional `markdown` string is rendered in-game when the player opens
-// an installation (category "Installation"); links without one get a
-// generated template from their title/description.
+// Installations (category "Installation") open an in-game markdown reader.
+// Put the prose in installations/<name>.md and point `markdownFile` at it
+// (omit it and the file is derived from the title, e.g. "WeAre!" ->
+// installations/weare.md). An inline `markdown` string still works as a
+// fallback and is used if the file can't be loaded.
 
 let linkData = [
   {
@@ -52,52 +54,14 @@ let linkData = [
     url: "https://flic.kr/s/aHskHQEi7K",
     description: "An alien view on the human population - Sockel - Bern",
     category: "Installation",
-    markdown: `# WeAre!
-
-## An alien view on the human population
-
-**Venue:** Sockel — Bern
-**Format:** Interactive installation
-
----
-
-A stranger in a strange land looks back at us. *WeAre!* turns the
-visitor into an alien anthropologist: from the outside, our everyday
-gestures, habits and rituals suddenly look wildly exotic.
-
-- **Interactive** — visitors become part of the observation
-- **Playful** — a light-hearted mirror held up to humanity
-
-> What would an extraterrestrial write in its field notes about us?
-
-[Browse the photo gallery on Flickr](https://flic.kr/s/aHskHQEi7K)
-`,
+    markdownFile: "installations/weare.md",
   },
   {
     title: "Play w/ your World",
     url: "https://flic.kr/s/aHsmLaiqq1",
     description: "Klimahalle - Reitschule, Grosse Halle - Bern",
     category: "Installation",
-    markdown: `# Play w/ your World
-
-## Klimahalle — Reitschule, Grosse Halle, Bern
-
-**Venue:** Reitschule, Grosse Halle — Bern
-**Format:** Interactive installation
-
----
-
-A large-scale play space where the audience reshapes the room by
-simply *playing*. Part arcade, part climate experiment, the
-installation invites bold hands and quick reflexes.
-
-- **Playful interaction** — movement drives the world
-- **Big space** — built for the Grosse Halle
-
-> The world is a toy. Play responsibly.
-
-[Browse the photo gallery on Flickr](https://flic.kr/s/aHsmLaiqq1)
-`,
+    markdownFile: "installations/play-w-your-world.md",
   },
   {
     title: "AurART",
@@ -105,26 +69,7 @@ installation invites bold hands and quick reflexes.
     description:
       "Aura-Foto-Installation - Museum für Kommunikation - Bern",
     category: "Installation",
-    markdown: `# AurART
-
-## Aura photo installation
-
-**Venue:** Museum für Kommunikation — Bern
-**Format:** Aura photo installation
-
----
-
-Your energy becomes an image. *AurART* measures tiny electrical
-signals from the body and translates them into a vivid **aura
-portrait** — part photograph, part energy field.
-
-- **Bio-feedback** — the body becomes the pigment
-- **One of a kind** — every portrait is unique
-
-> A self-portrait made of your own electricity.
-
-[Browse the photo gallery on Flickr](https://flic.kr/s/aHBqjzEF1c)
-`,
+    markdownFile: "installations/aurart.md",
   },
 ];
 
@@ -155,10 +100,13 @@ function validateLinkData() {
     if (typeof link.description !== "string") {
       link.description = "";
     }
-    // Optional markdown body: drop it if it isn't a string so the renderer
-    // can safely fall back to a generated template.
+    // Optional markdown body/file: drop them if they aren't strings so the
+    // renderer can safely fall back to a generated template.
     if (typeof link.markdown !== "string") {
       delete link.markdown;
+    }
+    if (typeof link.markdownFile !== "string") {
+      delete link.markdownFile;
     }
     valid.push(link);
   });

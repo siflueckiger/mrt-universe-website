@@ -513,6 +513,29 @@ body.start-open {
 .preview-markdown > :first-child {
   margin-top: 0;
 }
+.preview-markdown .preview-loading {
+  color: #00ff00;
+  animation: preview-blink 1s steps(1) infinite;
+}
+.preview-markdown .preview-notice {
+  margin: 0 0 18px;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 170, 0, 0.6);
+  border-radius: 6px;
+  background: rgba(255, 170, 0, 0.08);
+  color: #ffcf80;
+  font-size: 12px;
+}
+@keyframes preview-blink {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  51%,
+  100% {
+    opacity: 0.35;
+  }
+}
 .preview-markdown::-webkit-scrollbar {
   width: 10px;
 }
