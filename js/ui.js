@@ -155,7 +155,9 @@ function updateHUD() {
     const remaining = chaosRemaining();
     let chaosHtml =
       '<div style="color: #ff5555; font-weight: bold; font-size: 15px;">🔥 CAT CHAOS ENGAGED</div>' +
-      '<div style="color: #888; font-size: 11px; margin-top: 4px;">SPACE = fire · C = toggle (debug)</div>' +
+      '<div style="color: #888; font-size: 11px; margin-top: 4px;">SPACE = fire · F = auto ' +
+      (gameState.autoFire ? "ON" : "OFF") +
+      " · C = toggle (debug)</div>" +
       '<div class="distance">Targets remaining: ' +
       remaining +
       "</div>";

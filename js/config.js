@@ -99,6 +99,18 @@ const GAME_CONFIG = {
     titleShardLifespan: 70,
     // Puffs in the gas cloud left by a destroyed nebula
     gasPuffs: 12,
+    fireRate: 6, // frames between shots while holding SPACE / auto-firing
+    aimEase: 0.18, // how fast the cat head swings toward its target (0..1)
+    // Cascade detonations: a blast can ignite nearby objects
+    cascadeChance: 0.3,
+    cascadeRadius: 170,
+    cascadeMaxDepth: 3,
+    // Big kills (planet/link) shove nearby objects away
+    bigShockRadius: 320,
+    bigShockStrength: 12,
+    // Persistent tumbling wreckage left by big kills
+    wreckagePieces: 8,
+    wreckageLifespan: 300,
     autoFire: false, // debug helper: fire continuously when on
     // Red glimmer overlay intensity at 0% and 100% destruction progress
     overlayIntensityMin: 0.22,

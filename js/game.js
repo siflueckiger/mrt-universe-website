@@ -15,6 +15,11 @@ const gameState = {
   laserTarget: null,
   laserFrames: 0,
   screenShakeFrames: 0,
+  // rapid/auto fire state (F toggles auto; holding SPACE rapid-fires)
+  autoFire: false,
+  fireCooldown: 0,
+  // smoothed cat head rotation toward the current target (radians)
+  catAngle: 0,
 };
 
 // ==================== GLOBALS ====================
@@ -50,6 +55,9 @@ function setup() {
   createCanvas(windowWidth, windowHeight);
   smooth();
   textAlign(CENTER, CENTER);
+
+  // Auto-fire starts from config (debug helper / ?chaos runs)
+  gameState.autoFire = GAME_CONFIG.catMode.autoFire;
 
   // Stars
   for (let i = 0; i < GAME_CONFIG.counts.stars; i++) {
@@ -188,6 +196,7 @@ function draw() {
     translate(shakeX, shakeY);
   }
   if (gameState.laserFrames > 0) gameState.laserFrames--;
+  if (gameState.fireCooldown > 0) gameState.fireCooldown--;
 
   // Stars
   for (let star of stars) {
@@ -335,6 +344,9 @@ function draw() {
   // Hyperspace streaks while warping (behind the ship)
   drawWarpStreaks();
 
+  // Ease the cat head toward its target before drawing the ship
+  updateCatAim();
+
   // Ship
   ship.display();
 
@@ -376,13 +388,13 @@ function handleInput() {
     return;
   }
 
-  // Debug helper: keep firing automatically while enabled
-  if (
-    gameState.catMode &&
-    GAME_CONFIG.catMode.autoFire &&
-    gameState.laserFrames <= 0
-  ) {
-    fireCatLaser();
+  // Rapid fire: holding SPACE (or auto-fire on) pumps the laser every
+  // fireRate frames. Movement still works while firing.
+  if (gameState.catMode && (gameState.autoFire || keyIsDown(32))) {
+    if (gameState.fireCooldown <= 0) {
+      fireCatLaser();
+      gameState.fireCooldown = GAME_CONFIG.catMode.fireRate;
+    }
   }
 
   // Determine input direction from keyboard (arrows or WASD) and joystick
@@ -768,6 +780,8 @@ function setCatMode(on) {
   if (!gameState.catMode) {
     gameState.laserTarget = null;
     gameState.laserFrames = 0;
+    gameState.fireCooldown = 0;
+    gameState.catAngle = 0;
   }
 }
 
@@ -854,6 +868,67 @@ function createExplosion(x, y, kind, source) {
   } else if (kind === "link" && source && source.data) {
     spawnTitleShards(x, y, source.data.title);
   }
+
+  // Big kills throw a wide shockwave, scatter persistent wreckage and shove
+  // nearby objects outward.
+  if (kind === "planet" || kind === "link") {
+    explosions.push(new Shockwave(x, y, colors[0], 2.4));
+    for (let i = 0; i < GAME_CONFIG.catMode.wreckagePieces; i++) {
+      explosions.push(new Wreckage(x, y));
+    }
+    nudgeNearby(
+      x,
+      y,
+      GAME_CONFIG.catMode.bigShockRadius,
+      GAME_CONFIG.catMode.bigShockStrength
+    );
+  }
+}
+
+// Shove world objects away from a big-kill epicenter
+function nudgeNearby(x, y, radius, strength) {
+  const shove = function (obj) {
+    if (!obj || typeof obj.x !== "number") return;
+    const d = dist(x, y, obj.x, obj.y);
+    if (d <= 0 || d > radius) return;
+    const f = (1 - d / radius) * strength;
+    obj.x += ((obj.x - x) / d) * f;
+    obj.y += ((obj.y - y) / d) * f;
+  };
+  for (let s of stars) shove(s);
+  for (let p of planets) shove(p);
+  for (let a of asteroids) shove(a);
+  for (let n of nebulae) shove(n);
+  for (let t of trash) shove(t);
+  for (let l of links) shove(l);
+}
+
+// Nearby finite destructibles (stars excluded so cascades can't run away)
+function findNearbyTargets(x, y, radius) {
+  const found = [];
+  const check = function (obj, kind) {
+    if (!obj || typeof obj.x !== "number") return;
+    if (dist(x, y, obj.x, obj.y) <= radius) found.push({ obj: obj, kind: kind });
+  };
+  for (let p of planets) check(p, "planet");
+  for (let a of asteroids) check(a, "asteroid");
+  for (let l of links) check(l, "link");
+  for (let n of nebulae) check(n, "nebula");
+  for (let t of trash) check(t, "trash");
+  return found;
+}
+
+// A blast can set off nearby objects, which can set off further ones
+function igniteCascade(x, y, depth) {
+  if (depth > GAME_CONFIG.catMode.cascadeMaxDepth) return;
+  const nearby = findNearbyTargets(x, y, GAME_CONFIG.catMode.cascadeRadius);
+  for (let t of nearby) {
+    if (random() < GAME_CONFIG.catMode.cascadeChance) {
+      createExplosion(t.obj.x, t.obj.y, t.kind, t.obj);
+      destroyTarget(t);
+      igniteCascade(t.obj.x, t.obj.y, depth + 1);
+    }
+  }
 }
 
 // Scatter a destroyed link's title as spinning, fading letters
@@ -927,16 +1002,26 @@ function fireCatLaser() {
   gameState.laserTarget = { x: target.obj.x, y: target.obj.y };
   createExplosion(target.obj.x, target.obj.y, target.kind, target.obj);
   playSound("explosion");
+  const hx = target.obj.x;
+  const hy = target.obj.y;
   destroyTarget(target);
+  igniteCascade(hx, hy, 1);
 }
 
 function drawLaser() {
   const t = gameState.laserTarget;
   if (!t || gameState.laserFrames <= 0) return;
   const r = ship.size * GAME_CONFIG.catMode.scale;
-  const eyeY = ship.y - r * 0.06;
-  const exL = ship.x - r * 0.32;
-  const exR = ship.x + r * 0.32;
+  // Eye positions follow the cat's current aim so the beam always starts
+  // at the (rotated) eyes.
+  const ca = gameState.catAngle;
+  const cosA = cos(ca);
+  const sinA = sin(ca);
+  const rot = function (px, py) {
+    return [ship.x + px * cosA - py * sinA, ship.y + px * sinA + py * cosA];
+  };
+  const eyeL = rot(-r * 0.32, -r * 0.06);
+  const eyeR = rot(r * 0.32, -r * 0.06);
   const a = map(
     gameState.laserFrames,
     0,
@@ -948,13 +1033,36 @@ function drawLaser() {
   strokeCap(ROUND);
   stroke(255, 60, 60, a * 0.5);
   strokeWeight(9);
-  line(exL, eyeY, t.x, t.y);
-  line(exR, eyeY, t.x, t.y);
+  line(eyeL[0], eyeL[1], t.x, t.y);
+  line(eyeR[0], eyeR[1], t.x, t.y);
   stroke(255, 255, 255, a);
   strokeWeight(3);
-  line(exL, eyeY, t.x, t.y);
-  line(exR, eyeY, t.x, t.y);
+  line(eyeL[0], eyeL[1], t.x, t.y);
+  line(eyeR[0], eyeR[1], t.x, t.y);
   pop();
+}
+
+// Smoothly swing the cat head toward the current laser target
+function updateCatAim() {
+  if (!gameState.catMode) {
+    gameState.catAngle = 0;
+    return;
+  }
+  const t = gameState.laserTarget;
+  let target = 0;
+  if (t && gameState.laserFrames > 0) {
+    target = Math.atan2(t.y - ship.y, t.x - ship.x) + PI / 2;
+  }
+  let diff = target - gameState.catAngle;
+  while (diff > PI) diff -= TWO_PI;
+  while (diff < -PI) diff += TWO_PI;
+  gameState.catAngle += diff * GAME_CONFIG.catMode.aimEase;
+}
+
+// F toggles continuous auto-fire while in cat mode
+function toggleAutoFire() {
+  gameState.autoFire = !gameState.autoFire;
+  playSound(gameState.autoFire ? "select" : "deselect");
 }
 
 function keyPressed(e) {
@@ -969,13 +1077,13 @@ function keyPressed(e) {
     }
     return;
   }
-  // Cat Chaos: C toggles the mode (debug), SPACE fires the auto-laser
+  // Cat Chaos: C toggles the mode (debug), F toggles auto-fire
   if (key === "c" || key === "C") {
     if (!(e && e.repeat)) toggleCatMode();
     return;
   }
-  if (gameState.catMode && key === " " && !linksListOpen && !infoMenuOpen) {
-    fireCatLaser();
+  if (gameState.catMode && (key === "f" || key === "F")) {
+    if (!(e && e.repeat)) toggleAutoFire();
     return;
   }
   // Info/how-to-play toggle (I). The link list handles I in its own listener.
@@ -1025,8 +1133,12 @@ function keyPressed(e) {
     }
     return;
   }
-  // Open link on ENTER or SPACE
-  if ((key === "Enter" || key === " ") && gameState.nearestLink) {
+  // Open link on ENTER or SPACE (not while in cat mode — SPACE fires there)
+  if (
+    !gameState.catMode &&
+    (key === "Enter" || key === " ") &&
+    gameState.nearestLink
+  ) {
     tryOpenLink(gameState.nearestLink);
   }
   // Deselect on ESC key

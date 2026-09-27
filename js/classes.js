@@ -85,6 +85,8 @@ class Ship {
   // configured, otherwise a procedural retro pixel-art cyber-cat.
   displayCat() {
     const r = this.size * GAME_CONFIG.catMode.scale; // footprint radius
+    // Aim the whole head toward the current target (eased in draw loop)
+    rotate(gameState.catAngle || 0);
     if (catImage) {
       imageMode(CENTER);
       image(catImage, 0, 0, r * 2, r * 2);
@@ -691,6 +693,54 @@ class GasBurst {
     }
     colorMode(RGB);
     blendMode(BLEND);
+    pop();
+  }
+}
+
+// Persistent tumbling wreckage left behind by big kills. Drifts slowly and
+// fades over a long lifespan so battlefields linger after the blast.
+class Wreckage {
+  constructor(x, y, color) {
+    this.x = x;
+    this.y = y;
+    this.vx = random(-1.1, 1.1);
+    this.vy = random(-1.1, 1.1);
+    this.size = random(8, 20);
+    this.rot = random(TWO_PI);
+    this.rotSpeed = random(-0.08, 0.08);
+    this.maxLife = GAME_CONFIG.catMode.wreckageLifespan;
+    this.life = this.maxLife;
+    this.color = color || [random(90, 150), random(80, 130), random(70, 120)];
+  }
+
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vx *= 0.995;
+    this.vy *= 0.995;
+    this.rot += this.rotSpeed;
+    this.life--;
+  }
+
+  isDead() {
+    return this.life <= 0;
+  }
+
+  display() {
+    push();
+    translate(this.x, this.y);
+    rotate(this.rot);
+    const a = map(this.life, 0, this.maxLife, 0, 255);
+    noStroke();
+    fill(this.color[0], this.color[1], this.color[2], a);
+    // Chunky jagged fragment
+    beginShape();
+    vertex(-this.size * 0.5, -this.size * 0.3);
+    vertex(this.size * 0.3, -this.size * 0.5);
+    vertex(this.size * 0.5, this.size * 0.2);
+    vertex(0, this.size * 0.5);
+    vertex(-this.size * 0.4, this.size * 0.3);
+    endShape(CLOSE);
     pop();
   }
 }
