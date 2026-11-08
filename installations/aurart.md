@@ -4,6 +4,7 @@
 
 **Venue:** Museum für Kommunikation — Bern
 **Format:** Aura photo installation
+**Documented:** 9 November 2023
 
 ---
 

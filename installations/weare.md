@@ -4,6 +4,7 @@
 
 **Venue:** Sockel — Bern
 **Format:** Interactive installation
+**Documented:** 30 September 2018
 
 ---
 

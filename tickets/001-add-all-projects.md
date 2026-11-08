@@ -67,7 +67,20 @@ documentation at <https://puzzle-palooza.netlify.app/dokumentation/>.
 
 - URL for **mfk — super fotos**.
 - URL for **Brumm Brumm AAHHH**.
-- Confirm which TG53 URL is canonical.
+
+Checked (2026-11-08) and came up empty:
+
+- Web search for "Brumm Brumm AAHHH" and "mfk super fotos" only returns
+  unrelated results.
+- The `magicrambatrash` Flickr account has exactly three albums:
+  `WeAre` (2018), `Klimahalle 2020` (Play w/ your World) and
+  `Vernissage – Nichts` (AurART). No album for either missing piece.
+- Neither works is on the site under another name, so there is nothing to
+  reuse.
+
+Options once Simon digs the links out: a different Flickr account / Vimeo /
+YouTube channel, an old Netlify deploy, or — if no online version exists —
+skip the entry and note the piece as offline-only in `all-projects.md`.
 
 ## Links
 

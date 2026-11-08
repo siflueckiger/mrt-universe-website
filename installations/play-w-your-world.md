@@ -4,6 +4,7 @@
 
 **Venue:** Reitschule, Grosse Halle — Bern
 **Format:** Interactive installation
+**Documented:** 16–18 January 2020
 
 ---
 

@@ -54,6 +54,13 @@ people at the full Flickr album. Embed a small curated set in
   committing.
 - Privacy: the portraits show identifiable visitors — Simon confirms the
   chosen ones may be published before they are committed.
+- **Chosen (Simon): 3 images.** Source photos from page 1 of the album,
+  `_h` size, downscaled to 1200px:
+  | file | flickr photo |
+  |------|--------------|
+  | `aurart-01.jpg` | 53320924533 (single sitter, full rainbow halo) |
+  | `aurart-02.jpg` | 53321154550 (single sitter, magenta/green) |
+  | `aurart-03.jpg` | 53320926419 (two sitters, shared field) |
 
 ## Blockers
 

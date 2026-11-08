@@ -45,6 +45,13 @@ One file per installation in `installations/`:
     built — confirm that is what the site actually is.
 - Text is supplied by Simon; language TBD (English is the current UI default,
   the Bern pieces may read better in German — decide per installation).
+- Dates now in the files are **not invented** — they come from the Flickr
+  album metadata behind each link: WeAre! (Sockel, 30.09.2018), Play w/ your
+  World (Klimahalle, 16–18.01.2020), AurART (Museum für Kommunikation,
+  09.11.2023).
+- Follow-up idea: WeAre! and Play w/ your World also have 24–26 photo albums,
+  so they could get the same curated-image treatment as AurART (reuse ticket
+  003's pattern + the new `.preview-markdown img` styling).
 - Editing an `.md` file and reloading the page is enough; the reader caches
   per page load, so a hard refresh picks up changes.
 - Keep `**bold**` / `*italic*` and `![]()` on a **single line**: the offline
