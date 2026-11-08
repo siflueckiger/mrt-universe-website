@@ -71,6 +71,13 @@ let linkData = [
     category: "Installation",
     markdownFile: "installations/aurart.md",
   },
+  {
+    title: "TG53 aka Gähn Zzzz Bäng",
+    url: "https://tg53.netlify.app/",
+    description: "aka puzzle palooza - video works for an art installation",
+    category: "Installation",
+    markdownFile: "installations/tg53.md",
+  },
 ];
 
 // ==================== LINK DATA VALIDATION ====================

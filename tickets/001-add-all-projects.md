@@ -26,30 +26,40 @@ file). Three projects are currently missing.
 | WeAre! | yes | WeAre! |
 | Play w/ your World | yes | Play w/ your World |
 | Brumm Brumm AAHHH | **no** | — |
-| TG53 aka Gähn Zzzz Bäng aka puzzle palooza | **no** | — |
+| TG53 aka Gähn Zzzz Bäng aka puzzle palooza | yes | TG53 aka Gähn Zzzz Bäng |
 
 ## Missing entries to add
 
 1. **mfk — super fotos** — needs `url`.
 2. **Brumm Brumm AAHHH** — needs `url`.
-3. **TG53 aka Gähn Zzzz Bäng aka puzzle palooza** — candidate URLs:
-   `https://puzzle-palooza.netlify.app/dokumentation/` and
-   `https://tg53.netlify.app/` (pick one, or record both in the markdown body).
+
+**TG53 — done.** Added as `TG53 aka Gähn Zzzz Bäng` with
+`url: https://tg53.netlify.app/` (the video works) and
+`markdownFile: installations/tg53.md`; the `.md` links to the
+documentation at <https://puzzle-palooza.netlify.app/dokumentation/>.
 
 ## Acceptance criteria
 
-- [ ] Add the three missing entries to `js/links-data.js` with category
-      `"Installation"` (confirm category with Simon if any are videos).
-- [ ] Add `markdownFile` for each — create `installations/<slug>.md`
-      from the generated template (real copy is ticket 002).
-- [ ] `for f in js/*.js; do node --check "$f"; done` passes.
+- [x] Add TG53 to `js/links-data.js` with category `"Installation"`.
+- [ ] Add **mfk — super fotos** and **Brumm Brumm AAHHH** to
+      `js/links-data.js` (blocked on URLs).
+- [x] Add `markdownFile` + `installations/tg53.md` (real copy is ticket 002).
+- [ ] Add `markdownFile` + `installations/<slug>.md` for the two missing ones.
+- [x] `for f in js/*.js; do node --check "$f"; done` passes.
 - [ ] Entries appear in the in-game link list and are flyable/readable.
-- [ ] Update the coverage table above to "yes".
+- [x] Update the coverage table above to "yes" (TG53).
 
 ## Notes / decisions
 
 - Existing installations use `markdownFile` (see ticket for standalone `.md`
   loading); omit it only if the title-derived slug is the filename you want.
+- Decision (Simon, TG53): `tg53.netlify.app` holds the **videos** for the art
+  installation, `puzzle-palooza.netlify.app/dokumentation/` is the
+  **documentation**. Both are in `installations/tg53.md`; the link `url` points
+  at the videos.
+- Title trimmed to "TG53 aka Gähn Zzzz Bäng" (the full "…aka puzzle palooza"
+  would dominate the HUD/minimap); the description keeps the puzzle-palooza
+  alias.
 - Keep the external URL on the link (used by ENTER/`Open in new tab`), even
   when a markdown body exists.
 
