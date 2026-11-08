@@ -28,15 +28,4 @@ body twice.
 It looks like a portrait of an invisible field. It is a camera, a computer and
 a very good costume.
 
-## Portraits from the installation
-
-![A visitor inside a full rainbow aura](assets/installations/aurart/aurart-01.jpg)
-*One body, a full spectrum — the halo keeps moving while you sit.*
-
-![A visitor turned away, wrapped in magenta and green](assets/installations/aurart/aurart-02.jpg)
-*Even a turned shoulder leaves its colour behind.*
-
-![Two visitors sharing one magenta and green field](assets/installations/aurart/aurart-03.jpg)
-*Two people, one shared field.*
-
 [Browse the full photo gallery on Flickr](https://flic.kr/s/aHBqjzEF1c)

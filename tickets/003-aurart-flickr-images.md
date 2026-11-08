@@ -1,6 +1,6 @@
 # 003 — Curate AurART Flickr images in the reader
 
-Status: doing
+Status: done
 Priority: low
 Area: content
 
@@ -9,6 +9,11 @@ Area: content
 The AurART reader should show a hand-picked **few** images rather than pointing
 people at the full Flickr album. Embed a small curated set in
 `installations/aurart.md` and keep a link to the full album.
+
+**Outcome: reversed.** Three images were curated and committed, then Simon
+asked for them to be removed again — the reader stays text-only and points at
+the Flickr album. The reader-side image support was kept (it is generic and
+tested), so this is easy to revive later.
 
 ## Plan
 
@@ -24,14 +29,12 @@ people at the full Flickr album. Embed a small curated set in
 
 ## Acceptance criteria
 
-- [x] Curated images added under `assets/installations/aurart/`
-      (`aurart-01.jpg` … `aurart-03.jpg`, 1200×675, ~45 KB each).
-- [x] `installations/aurart.md` embeds only the curated set (no full-album
-      dump).
-- [x] Images render in the reader (paths 200 via `python3 -m http.server`;
-      visual check in the browser still open).
-- [x] `css/style.css` styles reader images; layout holds on desktop + mobile
-      (mobile check still open).
+- [x] Album identified and a curated set picked (3 portrait shots).
+- [x] Images embedded with captions, then **removed again on Simon's
+      request** — `assets/installations/aurart/` deleted, `aurart.md` is
+      text-only.
+- [x] Reader image support kept: `.preview-markdown img` styling in
+      `css/style.css` + `![]()` in the offline `fallbackMarkdown()` parser.
 - [x] Album link still works from the footer / body.
 
 ## Notes / decisions
@@ -65,10 +68,15 @@ people at the full Flickr album. Embed a small curated set in
   | `aurart-01.jpg` | 53320924533 (single sitter, full rainbow halo) |
   | `aurart-02.jpg` | 53321154550 (single sitter, magenta/green) |
   | `aurart-03.jpg` | 53320926419 (two sitters, shared field) |
+- **Reversed (Simon, same day):** no images in the reader. The three files and
+  the `## Portraits from the installation` block are gone; the copy now ends
+  with the Flickr album link only. Kept: the generic image support in
+  `js/ui.js` and `css/style.css`, and this ticket's research (album id, photo
+  ids, `_h`-only quirk) in case the decision flips back.
 
 ## Blockers
 
-- Image selection (which/how many).
+- None — closed. The images were removed by decision, not by a blocker.
 
 ## Links
 
