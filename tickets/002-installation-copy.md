@@ -47,6 +47,10 @@ One file per installation in `installations/`:
   the Bern pieces may read better in German — decide per installation).
 - Editing an `.md` file and reloading the page is enough; the reader caches
   per page load, so a hard refresh picks up changes.
+- Keep `**bold**` / `*italic*` and `![]()` on a **single line**: the offline
+  `fallbackMarkdown()` parser works line by line, so emphasis that wraps is
+  rendered literally. `<>` autolinks are not supported there either — use
+  `[label](url)`.
 - Markdown is rendered with marked (CDN) or the built-in `fallbackMarkdown()`;
   supported basics: `#`/`##` headings, `**bold**`, `*italic*`, lists,
   `> quotes`, `---`, `[links](url)`.
