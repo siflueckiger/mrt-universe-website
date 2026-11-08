@@ -8,16 +8,16 @@
 
 ---
 
-A play space at the scale of a hall. Visitors shape the world in front of
-them simply by moving through it: hands, bodies and reflexes feed straight
-back into the room, and the room answers immediately.
+A big ball of light hangs in the hall: the earth. It is tracked, and it
+answers to the people moving underneath it.
 
-Part arcade, part climate experiment, it invites bold hands and quick
-reflexes — and rewards the people who stop watching and start playing.
+Every push leaves a mark. The longer the game runs, the darker the sound, the
+higher the ball climbs, the more the projected world deforms. Eventually the
+earth is out of reach — and the end cannot be stopped.
 
-- **Playful interaction** — movement drives the world
-- **Big space** — built for the Grosse Halle
-- **Everyone plays** — no instructions, no correct way
+- **One planet, shared** — everybody moves the same ball
+- **Damage adds up** — the world gets worse the longer you play
+- **A highscore** — for the fastest destruction of the world
 
 > The world is a toy. Play responsibly.
 

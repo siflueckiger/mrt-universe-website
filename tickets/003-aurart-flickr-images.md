@@ -54,6 +54,10 @@ people at the full Flickr album. Embed a small curated set in
   committing.
 - Privacy: the portraits show identifiable visitors — Simon confirms the
   chosen ones may be published before they are committed.
+- The AurART code (`github.com/siflueckiger/aurART`) is **private**, so the
+  reader does not link it. Revisit when/if the repo goes public — it would be
+  a good "see the actual script" link under the new *How it actually works*
+  section.
 - **Chosen (Simon): 3 images.** Source photos from page 1 of the album,
   `_h` size, downscaled to 1200px:
   | file | flickr photo |

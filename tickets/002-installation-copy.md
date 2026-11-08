@@ -34,15 +34,31 @@ One file per installation in `installations/`:
 
 - Decision (Simon): **English first**, Simon edits. German versions, if any,
   become a follow-up ticket.
-- **Draft v1 is in place** for all four files. Written to be fact-light on
-  purpose — the prose works without dates, teams or technical details, so
-  nothing false is asserted. Worth a fact check where it gets specific:
-  - `aurart.md`: "made in public" (the portrait appears while you sit) and the
-    three image captions.
-  - `weare.md`: the greeting/distance/hands examples.
-  - `play-w-your-world.md`: "no instructions, no correct way".
-  - `tg53.md`: the documentation is described as the record of how it was
-    built — confirm that is what the site actually is.
+- **Draft v2 is in place**, corrected by Simon. The facts that drove the
+  rewrite (sources were read for research only — **no repo/Drive links are
+  added to the reader**, by Simon's request):
+  - `aurart.md`: **not** a bio-feedback measurement. A script detects where
+    people are in the camera frame and paints a colourful splash there. The
+    poetic intro stays, but a "How it actually works" section tells the truth
+    at the end.
+  - `weare.md`: visitors wear VR goggles and see themselves **from above**
+    (Raspberry Pi camera streams + Processing). A short paragraph covers the
+    later `WeAre.U`, which tracks players with UWB tags and shows them as
+    abstract points.
+  - `play-w-your-world.md`: a big tracked ball of light is the earth; moving
+    it damages the world — darker sound, the ball climbs, the projection
+    deforms until the earth is out of reach and the end is unstoppable. There
+    was a highscore for the fastest world destruction.
+  - `tg53.md`: physical box inspired by *Keep Talking and Nobody Explodes*,
+    started as a school-class project idea; several modules for two players.
+    It is not a bomb but a **dream generator** that must be shut down before
+    everyone is left with nightmares. Documented at Open Education Day, Bern,
+    6 May 2023.
+- The German documentation site stays unlinked in the body: the reader's
+  footer button opens the entry URL (the videos) only. Revisit if Simon wants
+  the docs reachable from the game.
+- The AurART repo exists but is **private** — no link in the reader until it
+  is public.
 - Text is supplied by Simon; language TBD (English is the current UI default,
   the Bern pieces may read better in German — decide per installation).
 - Dates now in the files are **not invented** — they come from the Flickr
