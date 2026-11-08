@@ -30,7 +30,7 @@ fill it in. Add a row to the table. Keep one task per ticket.
 | ID | Title | Status | Priority | Area | Blocked by |
 |----|-------|--------|----------|------|------------|
 | [001](001-add-all-projects.md) | Add all projects from `all-projects.md` | blocked | high | data | missing URLs |
-| [002](002-installation-copy.md) | Write installation copy | todo | medium | content | content by Simon |
+| [002](002-installation-copy.md) | Write installation copy | blocked | medium | content | content by Simon |
 | [003](003-aurart-flickr-images.md) | Curate AurART Flickr images in the reader | blocked | low | content | image selection |
 | [004](004-mobile-experience.md) | Rework the mobile experience | todo | high | ux / architecture | — |
 

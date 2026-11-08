@@ -1,6 +1,6 @@
 # 002 — Write installation copy
 
-Status: todo
+Status: blocked
 Priority: medium
 Area: content
 
@@ -17,8 +17,9 @@ One file per installation in `installations/`:
 - [ ] `installations/weare.md`
 - [ ] `installations/play-w-your-world.md`
 - [ ] `installations/aurart.md`
+- [ ] `installations/tg53.md` (added, currently starter prose)
 - [ ] New installations from ticket 001 (`mfk — super fotos`,
-      `Brumm Brumm AAHHH`, `TG53`)
+      `Brumm Brumm AAHHH` — once the URLs land)
 
 ## Acceptance criteria
 
