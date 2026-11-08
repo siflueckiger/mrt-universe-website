@@ -368,12 +368,37 @@ function preloadInstallations() {
   });
 }
 
-// Inline markdown (already HTML-escaped input): code, links, bold, italic
+// Markdown URLs are author-written (our own .md files), but never let a
+// javascript:/data: scheme through. Relative paths (assets/...) are fine.
+function safeMarkdownUrl(url) {
+  const u = String(url == null ? "" : url).trim();
+  if (/^(?:https?:|mailto:)/i.test(u)) return u;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(u)) return "";
+  return u;
+}
+
+// Inline markdown (already HTML-escaped input): code, images, links, bold, italic
 function inlineMarkdown(text) {
   let s = escapeHtml(text);
   s = s.replace(/`([^`]+)`/g, "<code>$1</code>");
+  // Images before links, otherwise "[alt](url)" would swallow the "!".
+  // Quotes are already escaped here, hence the &quot; title form.
+  s = s.replace(
+    /!\[([^\]]*)\]\(([^)\s]+)(?:\s+&quot;([^&]*)&quot;)?\)/g,
+    function (_match, alt, url, title) {
+      const src = safeMarkdownUrl(url);
+      if (!src) return _match;
+      return (
+        '<img src="' + src + '" alt="' + alt + '"' +
+        (title ? ' title="' + title + '"' : "") +
+        ' loading="lazy">'
+      );
+    }
+  );
   s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, function (_match, label, url) {
-    return '<a href="' + url + '">' + label + "</a>";
+    const href = safeMarkdownUrl(url);
+    if (!href) return _match;
+    return '<a href="' + href + '">' + label + "</a>";
   });
   s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   s = s.replace(/\*([^*]+)\*/g, "<em>$1</em>");

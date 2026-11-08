@@ -18,8 +18,8 @@ people at the full Flickr album. Embed a small curated set in
    lowercase-kebab, no spaces).
 3. Reference them in `installations/aurart.md` with captions, e.g.
    `![Aura portrait](assets/installations/aurart/aura-01.jpg)`.
-4. Add `.preview-markdown img` styling in `css/style.css` so images fit the CRT
-   reader (max-width 100%, border/glow consistent with the retro look, spacing).
+4. ~~Add `.preview-markdown img` styling in `css/style.css`~~ — done, together
+   with `![]()` support in the offline `fallbackMarkdown()` parser.
 5. Keep the existing "Open in new tab" footer button pointing at the full album.
 
 ## Acceptance criteria
@@ -35,11 +35,22 @@ people at the full Flickr album. Embed a small curated set in
 
 - Decision (Simon): embed a few images in the reader — do **not** show all
   Flickr images.
-- `renderMarkdown()` passes `<img>` through; marked (CDN) handles image syntax.
-  The offline `fallbackMarkdown()` parser does **not** support `![]()` yet —
-  add it if offline image support matters (same regex style as links).
 - Downloaded assets avoid Flickr hotlink/CORS surprises; no external image
   requests at runtime.
+- **Album identified:** `flic.kr/s/aHBqjzEF1c` resolves to
+  `flickr.com/photos/magicrambatrash/albums/72177720297140039`, titled
+  “Vernissage – Nichts”, Museum für Kommunikation, 09.11.2023 — 117 photos,
+  and the set does contain the AurART aura portraits (confirmed on 25
+  thumbnails from page 1). All photos are 16:9 landscape, 1600px `_h` size.
+- **Reader support done:** `fallbackMarkdown()`/`inlineMarkdown()` now render
+  `![alt](url "title")`, and `.preview-markdown img` is styled in
+  `css/style.css` (max-width 100%, CRT border/glow). Links/images with a
+  `javascript:`/`data:` scheme are dropped instead of rendered.
+- Only the `_h` Flickr size is served for this album (`_n`/`_z`/`_c` return
+  410), so candidates must be pulled at `_h` and downscaled locally before
+  committing.
+- Privacy: the portraits show identifiable visitors — Simon confirms the
+  chosen ones may be published before they are committed.
 
 ## Blockers
 
