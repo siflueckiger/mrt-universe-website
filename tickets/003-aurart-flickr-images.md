@@ -1,6 +1,6 @@
 # 003 — Curate AurART Flickr images in the reader
 
-Status: blocked
+Status: doing
 Priority: low
 Area: content
 
@@ -24,12 +24,15 @@ people at the full Flickr album. Embed a small curated set in
 
 ## Acceptance criteria
 
-- [ ] Curated images added under `assets/installations/aurart/`.
-- [ ] `installations/aurart.md` embeds only the curated set (no full-album
+- [x] Curated images added under `assets/installations/aurart/`
+      (`aurart-01.jpg` … `aurart-03.jpg`, 1200×675, ~45 KB each).
+- [x] `installations/aurart.md` embeds only the curated set (no full-album
       dump).
-- [ ] Images render in the reader (verify with `python3 -m http.server`).
-- [ ] `css/style.css` styles reader images; layout holds on desktop + mobile.
-- [ ] Album link still works from the footer / body.
+- [x] Images render in the reader (paths 200 via `python3 -m http.server`;
+      visual check in the browser still open).
+- [x] `css/style.css` styles reader images; layout holds on desktop + mobile
+      (mobile check still open).
+- [x] Album link still works from the footer / body.
 
 ## Notes / decisions
 
