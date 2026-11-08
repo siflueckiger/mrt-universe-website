@@ -73,8 +73,8 @@ let linkData = [
   },
   {
     title: "TG53 aka Gähn Zzzz Bäng",
-    url: "https://tg53.netlify.app/",
-    description: "aka puzzle palooza - video works for an art installation",
+    url: "https://puzzle-palooza.netlify.app/dokumentation/",
+    description: "aka puzzle palooza - puzzle box for two players",
     category: "Installation",
     markdownFile: "installations/tg53.md",
   },

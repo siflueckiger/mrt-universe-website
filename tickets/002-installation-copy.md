@@ -54,9 +54,10 @@ One file per installation in `installations/`:
     It is not a bomb but a **dream generator** that must be shut down before
     everyone is left with nightmares. Documented at Open Education Day, Bern,
     6 May 2023.
-- The German documentation site stays unlinked in the body: the reader's
-  footer button opens the entry URL (the videos) only. Revisit if Simon wants
-  the docs reachable from the game.
+- The TG53 body stays text-only: the reader's footer button now opens the
+  German **documentation** (the entry `url` was switched to
+  `puzzle-palooza.netlify.app/dokumentation/`; the videos site is no longer
+  linked from the game).
 - The AurART repo exists but is **private** — no link in the reader until it
   is public.
 - Text is supplied by Simon; language TBD (English is the current UI default,

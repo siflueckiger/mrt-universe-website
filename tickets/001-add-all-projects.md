@@ -34,9 +34,9 @@ file). Three projects are currently missing.
 2. **Brumm Brumm AAHHH** — needs `url`.
 
 **TG53 — done.** Added as `TG53 aka Gähn Zzzz Bäng` with
-`url: https://tg53.netlify.app/` (the video works) and
-`markdownFile: installations/tg53.md`; the `.md` links to the
-documentation at <https://puzzle-palooza.netlify.app/dokumentation/>.
+`markdownFile: installations/tg53.md`. **Link updated (Simon):** the entry now
+points at the documentation, `https://puzzle-palooza.netlify.app/dokumentation/`,
+instead of the videos at `https://tg53.netlify.app/`.
 
 ## Acceptance criteria
 
@@ -55,8 +55,9 @@ documentation at <https://puzzle-palooza.netlify.app/dokumentation/>.
   loading); omit it only if the title-derived slug is the filename you want.
 - Decision (Simon, TG53): `tg53.netlify.app` holds the **videos** for the art
   installation, `puzzle-palooza.netlify.app/dokumentation/` is the
-  **documentation**. Both are in `installations/tg53.md`; the link `url` points
-  at the videos.
+  **documentation**. The build material lives in a Google Drive folder. Final
+  choice: the link `url` points at the **documentation**; the reader body
+  stays text-only (no repo/Drive links).
 - Title trimmed to "TG53 aka Gähn Zzzz Bäng" (the full "…aka puzzle palooza"
   would dominate the HUD/minimap); the description keeps the puzzle-palooza
   alias.
